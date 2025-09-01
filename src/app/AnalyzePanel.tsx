@@ -3,12 +3,28 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 
-export default function AnalyzePanel() {
+// ✅ Add a Props type that matches what page.tsx passes
+type Player = { name: string; number?: string; position?: string };
+type Cell = any; // or your real Required<Cell> type
+type Props = {
+  grid: Cell[][];
+  players: Player[];
+  teamName: string;
+};
+
+export default function AnalyzePanel({ grid, players, teamName }: Props) {
   const [jsonText, setJsonText] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [report, setReport] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+
+  // (optional) prefill JSON from live data so users don’t need to upload
+  // useEffect(() => {
+  //   if (grid && players) {
+  //     setJsonText(JSON.stringify({ teamName, players, grid }, null, 2));
+  //   }
+  // }, [grid, players, teamName]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -23,7 +39,7 @@ export default function AnalyzePanel() {
       setJsonText('');
       setFileName('');
     } finally {
-      e.target.value = ''; // allow re-selecting the same file
+      e.target.value = ''; // allow re-selecting same file
     }
   }
 
@@ -50,15 +66,10 @@ export default function AnalyzePanel() {
     }
   }
 
-  // Convert markdown → html (no global setOptions; pass options inline if desired)
-  const rendered = useMemo(() => {
-    if (!report) return '';
-    // If your marked version supports options here, you can pass them:
-    // return marked.parse(report, { headerIds: false }) as string;
-    return marked.parse(report) as string;
-  }, [report]);
+  const rendered = useMemo(() => (report ? (marked.parse(report) as string) : ''), [report]);
 
   return (
+
     <section className="bg-white border rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-semibold">AI Game Report</h2>

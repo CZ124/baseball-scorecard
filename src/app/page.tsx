@@ -1012,8 +1012,8 @@ export default function ScorecardPage() {
     });
   };
   
-  const [inningOuts, setInningOuts] = useState<number[]>(
-    Array(INNINGS.length).fill(0)
+  const [inningOuts, setInningOuts] = useState<(0 | 1 | 2 | 3)[]>(
+    Array(INNINGS.length).fill(0) as (0 | 1 | 2 | 3)[]
   );
 
   // keep players and grid lengths in sync
@@ -1060,7 +1060,7 @@ export default function ScorecardPage() {
 
   // call this when the dots button is clicked
   const recordOut = (inningIdx: number, batterIdx: number) => {
-    const newCount = Math.min(3, (inningOuts[inningIdx] ?? 0) + 1);
+    const newCount = Math.min(3, (inningOuts[inningIdx] ?? 0) + 1) as 0 | 1 | 2 | 3;
 
     setInningOuts((prev) => {
       const next = [...prev];
@@ -1071,7 +1071,7 @@ export default function ScorecardPage() {
     setGrid((g) => {
       const next = g.map((row) => row.slice());
       const cell = next[batterIdx][inningIdx] ?? { pitchSeq: [], outcome: '—', bases: 0, outs: 0, pathColor: 'black', notes: '' };
-      next[batterIdx][inningIdx] = { ...cell, outs: newCount };
+      next[batterIdx][inningIdx] = { ...cell, outs: newCount as 0 | 1 | 2 | 3 };
       return next;
     });
   };
@@ -1379,9 +1379,10 @@ export default function ScorecardPage() {
           </table>
         </section>
 
-        <section className="mt-8">
-          <AnalyzePanel grid={grid} players={players} teamName={teamName} />
-        </section>
+              
+      <section className="mt-8">
+        <AnalyzePanel grid={grid} players={players} teamName={teamName} />
+      </section>
       </div>
     </main>
   );
