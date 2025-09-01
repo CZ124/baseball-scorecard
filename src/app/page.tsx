@@ -1177,8 +1177,26 @@ export default function ScorecardPage() {
             {/* Team tabs */}
             <div className="inline-flex rounded-md border bg-white overflow-hidden">
             // when switching tabs:
-              <button onClick={() => { saveTeamToStorage(teamTab); setTeamTab('home'); loadTeamFromStorage('home'); }} />Home
-              <button onClick={() => { saveTeamToStorage(teamTab); setTeamTab('away'); loadTeamFromStorage('away'); }} />Away
+            <button
+              onClick={() => {
+                saveTeamToStorage(teamTab);
+                setTeamTab('home');
+                loadTeamFromStorage('home');
+              }}
+            >
+              Home
+            </button>
+
+            <button
+              onClick={() => {
+                saveTeamToStorage(teamTab);
+                setTeamTab('away');
+                loadTeamFromStorage('away');
+              }}
+            >
+              Away
+            </button>
+
             </div>
 
             <input
