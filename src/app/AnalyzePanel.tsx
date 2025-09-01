@@ -3,22 +3,21 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 
-// ✅ Add a Props type that matches what page.tsx passes
+// keep props if you pass them, but prefix with _ to silence "unused"
 type Player = { name: string; number?: string; position?: string };
-type Cell = any; // or your real Required<Cell> type
+type Cell = unknown;
 type Props = {
-  grid: Cell[][];
-  players: Player[];
-  teamName: string;
+  grid?: Cell[][];
+  players?: Player[];
+  teamName?: string;
 };
 
-export default function AnalyzePanel({ grid, players, teamName }: Props) {
+export default function AnalyzePanel({ grid: _grid, players: _players, teamName: _teamName }: Props) {
   const [jsonText, setJsonText] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [report, setReport] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
-
   // (optional) prefill JSON from live data so users don’t need to upload
   // useEffect(() => {
   //   if (grid && players) {
@@ -56,17 +55,36 @@ export default function AnalyzePanel({ grid, players, teamName }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jsonText, notes }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Request failed');
-      setReport(data.report || 'No report returned');
-    } catch (e: any) {
-      setReport(`Error: ${e.message || String(e)}`);
+      const data: unknown = await res.json();
+
+      if (!res.ok) {
+        const msg =
+          typeof data === 'object' && data !== null && 'error' in data
+            ? String((data as Record<string, unknown>).error)
+            : 'Request failed';
+        throw new Error(msg);
+      }
+
+      const r =
+        typeof data === 'object' &&
+        data !== null &&
+        'report' in data &&
+        typeof (data as Record<string, unknown>).report === 'string'
+          ? (data as Record<string, unknown>).report as string
+          : 'No report returned';
+
+      setReport(r);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setReport(`Error: ${msg}`);
     } finally {
       setLoading(false);
     }
   }
 
   const rendered = useMemo(() => (report ? (marked.parse(report) as string) : ''), [report]);
+
+
 
   return (
 
@@ -121,7 +139,7 @@ export default function AnalyzePanel({ grid, players, teamName }: Props) {
         <label className="text-sm font-medium mb-1 block">Report</label>
         <div
           className="prose prose-sm max-w-none border rounded-md p-3 min-h-[160px]"
-          dangerouslySetInnerHTML={{ __html: rendered || '—' as any }}
+          dangerouslySetInnerHTML={{ __html: rendered || '—' }}
         />
         {loading && <p className="text-sm text-gray-500 mt-2">Analyzing…</p>}
       </div>

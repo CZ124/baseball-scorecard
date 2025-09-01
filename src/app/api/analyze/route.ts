@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+
 // If you prefer Edge runtime, uncomment the next line
 // export const runtime = 'edge';
 
@@ -71,7 +72,8 @@ export async function POST(req: NextRequest) {
       'No content returned by the model.';
 
     return NextResponse.json({ report: content });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Server error' }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

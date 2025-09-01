@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, /* ... */ } from 'react';
 import AnalyzePanel from './AnalyzePanel';
 
 // --- Types ---
@@ -96,22 +97,23 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 // Normalize any loaded grid (migrate old shapes to new)
-function normalizeCell(c: any): Required<Cell> {
-  const pitchSeq: PitchMark[] = Array.isArray(c?.pitchSeq) ? c.pitchSeq : [];
-  const outcome: Outcome = (c?.outcome as Outcome) ?? '—';
-  const bases: 0 | 1 | 2 | 3 | 4 = (typeof c?.bases === 'number' ? c.bases : 0) as 0 | 1 | 2 | 3 | 4;
-  const outs: 0 | 1 | 2 | 3 = (typeof c?.outs === 'number' ? c.outs : 0) as 0 | 1 | 2 | 3;
-  const pathColor: 'black' | 'red' = c?.pathColor === 'red' ? 'red' : 'black';
-  const notes: string = typeof c?.notes === 'string' ? c.notes : '';
-  const runs: RunSeg[] = Array.isArray(c?.runs) ? c.runs : [];
+function normalizeCell(c: unknown): Required<Cell> {
+  const obj = (typeof c === 'object' && c !== null ? c : {}) as Record<string, unknown>;
+  const pitchSeq = Array.isArray(obj.pitchSeq) ? (obj.pitchSeq as PitchMark[]) : [];
+  const outcome  = (obj.outcome as Outcome) ?? '—';
+  const bases    = (typeof obj.bases === 'number' ? obj.bases : 0) as 0 | 1 | 2 | 3 | 4;
+  const outs     = (typeof obj.outs  === 'number' ? obj.outs  : 0) as 0 | 1 | 2 | 3;
+  const pathColor: 'black' | 'red' = obj.pathColor === 'red' ? 'red' : 'black';
+  const notes = typeof obj.notes === 'string' ? (obj.notes as string) : '';
+  const runs  = Array.isArray(obj.runs) ? (obj.runs as RunSeg[]) : [];
   return { pitchSeq, outcome, bases, outs, pathColor, notes, runs };
 }
 
-function normalizeGrid(g: any, rows: number): Required<Cell>[][] {
-  const grid: Required<Cell>[][] = Array.isArray(g) ? g : [];
+function normalizeGrid(g: unknown, rows: number): Required<Cell>[][] {
+  const grid = Array.isArray(g) ? (g as unknown[]) : [];
   const out: Required<Cell>[][] = [];
   for (let r = 0; r < rows; r++) {
-    const row = Array.isArray(grid[r]) ? grid[r] : [];
+    const row = Array.isArray(grid[r]) ? (grid[r] as unknown[]) : [];
     const normalizedRow: Required<Cell>[] = INNINGS.map((_, c) => normalizeCell(row[c]));
     out.push(normalizedRow);
   }
@@ -902,7 +904,9 @@ export default function ScorecardPage() {
   const [teamTab, setTeamTab] = useState<TeamKey>('home');
 
   // use team-scoped storage keys
-  const tkey = (k: string) => `${teamTab}:${k}`;
+  const tkey = useCallback((k: string) => `${teamTab}:${k}`, [teamTab]);
+
+
 
   // save/load the whole team bundle
   const saveTeamToStorage = (team: TeamKey) => {
@@ -913,36 +917,44 @@ export default function ScorecardPage() {
     saveToStorage(prefix('inningOuts'), inningOuts);
   };
 
-  const loadTeamFromStorage = (team: TeamKey) => {
-    const prefix = (k: string) => `${team}:${k}`;
+  // page.tsx
 
-    // teamName
+  function loadTeamFromStorage(team: TeamKey) {
+    const prefix = (k: string) => `${team}:${k}`;
+  
+    // team name
     const tn = loadFromStorage(prefix('teamName'), team === 'home' ? 'Home Team' : 'Away Team');
     setTeamName(tn);
-
-    // players (with your migration)
-    const storedPlayers = (() => {
-      const raw = loadFromStorage<any>(prefix('players'), DEFAULT_PLAYERS);
-      if (Array.isArray(raw) && typeof raw[0] === 'string') {
-        return (raw as string[]).map((name, i) => ({ name: name.replace(/^\d+\.?\s*/, '') || `Player ${i + 1}` })) as Player[];
-      }
-      return (raw as Player[]) ?? DEFAULT_PLAYERS;
-    })();
+  
+    // players
+    const storedPlayersRaw = loadFromStorage<unknown>(prefix('players'), DEFAULT_PLAYERS);
+    const storedPlayers: Player[] = Array.isArray(storedPlayersRaw)
+      ? (storedPlayersRaw as Player[])
+      : DEFAULT_PLAYERS;
     setPlayers(storedPlayers);
-
+  
     // grid
-    const loadedGrid = loadFromStorage(prefix('grid'), storedPlayers.map(() => makeEmptyRow()));
-    setGrid(normalizeGrid(loadedGrid, storedPlayers.length));
-
+    const loadedGridRaw = loadFromStorage<unknown>(
+      prefix('grid'),
+      storedPlayers.map(() => makeEmptyRow())
+    );
+    setGrid(normalizeGrid(loadedGridRaw, storedPlayers.length));
+  
     // inning outs
-    const outs = loadFromStorage(prefix('inningOuts'), Array(INNINGS.length).fill(0));
-    setInningOuts(outs);
-  };
+    const storedOuts = loadFromStorage<unknown>(
+      prefix('inningOuts'),
+      Array(INNINGS.length).fill(0)
+    );
+    if (Array.isArray(storedOuts)) {
+      setInningOuts(storedOuts as (0 | 1 | 2 | 3)[]);
+    }
+  }
+  
 
 
   // --- Players with jersey number & position ---
   const migratePlayers = (): Player[] => {
-    const stored = loadFromStorage<any>('players', DEFAULT_PLAYERS);
+    const stored = loadFromStorage<unknown>('players', DEFAULT_PLAYERS);
     if (Array.isArray(stored) && typeof stored[0] === 'string') {
       return (stored as string[]).map((name, i) => ({ name: name.replace(/^\d+\.?\s*/, '') || `Player ${i + 1}` }));
     }
@@ -1015,6 +1027,30 @@ export default function ScorecardPage() {
   const [inningOuts, setInningOuts] = useState<(0 | 1 | 2 | 3)[]>(
     Array(INNINGS.length).fill(0) as (0 | 1 | 2 | 3)[]
   );
+  
+  const recordOut = (inningIdx: number, batterIdx: number) => {
+    const newCount = Math.min(3, (inningOuts[inningIdx] ?? 0) + 1) as 0 | 1 | 2 | 3;
+  
+    setInningOuts((prev) => {
+      const next = [...prev] as (0 | 1 | 2 | 3)[];
+      next[inningIdx] = newCount;
+      return next;
+    });
+  
+    setGrid((g) => {
+      const next = g.map((row) => row.slice());
+      const cell = next[batterIdx][inningIdx] ?? { pitchSeq: [], outcome: '—', bases: 0, outs: 0, pathColor: 'black', notes: '' };
+      next[batterIdx][inningIdx] = { ...cell, outs: newCount };
+      return next;
+    });
+  };
+
+  useEffect(() => { if (mounted) saveToStorage(tkey('teamName'), teamName); }, [mounted, teamName, tkey]);
+  useEffect(() => { if (mounted) saveToStorage(tkey('players'), players); }, [mounted, players, tkey]);
+  useEffect(() => { if (mounted) saveToStorage(tkey('grid'), grid); }, [mounted, grid, tkey]);
+  useEffect(() => { if (mounted) saveToStorage(tkey('inningOuts'), inningOuts); }, [mounted, inningOuts, tkey]);
+
+  
 
   // keep players and grid lengths in sync
   useEffect(() => {
@@ -1032,11 +1068,10 @@ export default function ScorecardPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    // try to load 'home' team state; if nothing saved yet, your current defaults remain
-    loadTeamFromStorage('home');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadTeamFromStorage('home'); // ✅ team: TeamKey
   }, [mounted]);
   
+
 
   const resetAll = () => {
     if (confirm('Clear the whole scorecard?')) {
@@ -1059,22 +1094,7 @@ export default function ScorecardPage() {
   
 
   // call this when the dots button is clicked
-  const recordOut = (inningIdx: number, batterIdx: number) => {
-    const newCount = Math.min(3, (inningOuts[inningIdx] ?? 0) + 1) as 0 | 1 | 2 | 3;
-
-    setInningOuts((prev) => {
-      const next = [...prev];
-      next[inningIdx] = newCount;
-      return next;
-    });
-
-    setGrid((g) => {
-      const next = g.map((row) => row.slice());
-      const cell = next[batterIdx][inningIdx] ?? { pitchSeq: [], outcome: '—', bases: 0, outs: 0, pathColor: 'black', notes: '' };
-      next[batterIdx][inningIdx] = { ...cell, outs: newCount as 0 | 1 | 2 | 3 };
-      return next;
-    });
-  };
+  
     // --- analytics helpers ---
   // what counts as a hit for basic box stats
   const isHit = (o?: Outcome) => o === '1B' || o === '2B' || o === '3B' || o === 'HR';
@@ -1156,20 +1176,9 @@ export default function ScorecardPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {/* Team tabs */}
             <div className="inline-flex rounded-md border bg-white overflow-hidden">
-              <button
-                onClick={() => { saveTeamToStorage(teamTab); setTeamTab('home'); loadTeamFromStorage('home'); }}
-                className={`px-3 py-2 text-sm ${teamTab === 'home' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-                title="Switch to Home"
-              >
-                Home
-              </button>
-              <button
-                onClick={() => { saveTeamToStorage(teamTab); setTeamTab('away'); loadTeamFromStorage('away'); }}
-                className={`px-3 py-2 text-sm ${teamTab === 'away' ? 'bg-black text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-                title="Switch to Away"
-              >
-                Away
-              </button>
+            // when switching tabs:
+              <button onClick={() => { saveTeamToStorage(teamTab); setTeamTab('home'); loadTeamFromStorage('home'); }} />Home
+              <button onClick={() => { saveTeamToStorage(teamTab); setTeamTab('away'); loadTeamFromStorage('away'); }} />Away
             </div>
 
             <input
