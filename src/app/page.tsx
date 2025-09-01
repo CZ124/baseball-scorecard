@@ -725,10 +725,6 @@ function BigCell({
 
 
   const addRunSegment = (kind: RunKind, meta?: { byBatter?: number; note?: string }) => {
-    if (kind === 'reset') {
-      onChange({ ...merged, runs: [], bases: 0, outcome: '—' });
-      return;
-    }
     
   
     const runs = merged.runs ?? [];
