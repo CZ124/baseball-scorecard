@@ -1174,46 +1174,60 @@ export default function ScorecardPage() {
           
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Team tabs */}
-            <div className="inline-flex rounded-md border bg-white overflow-hidden">
-            // when switching tabs:
-            <button
-              onClick={() => {
-                saveTeamToStorage(teamTab);
-                setTeamTab('home');
-                loadTeamFromStorage('home');
-              }}
-            >
-              Home
-            </button>
+  {/* Team tabs */}
+  <div className="inline-flex rounded-md border bg-white overflow-hidden">
+    <button
+      onClick={() => {
+        saveTeamToStorage(teamTab);
+        setTeamTab("home");
+        loadTeamFromStorage("home");
+      }}
+      className={`px-3 py-2 text-sm ${
+        teamTab === "home"
+          ? "bg-black text-white"
+          : "text-gray-700 hover:bg-gray-100"
+      }`}
+    >
+      Home
+    </button>
+    <button
+      onClick={() => {
+        saveTeamToStorage(teamTab);
+        setTeamTab("away");
+        loadTeamFromStorage("away");
+      }}
+      className={`px-3 py-2 text-sm ${
+        teamTab === "away"
+          ? "bg-black text-white"
+          : "text-gray-700 hover:bg-gray-100"
+      }`}
+    >
+      Away
+    </button>
+  </div>
 
-            <button
-              onClick={() => {
-                saveTeamToStorage(teamTab);
-                setTeamTab('away');
-                loadTeamFromStorage('away');
-              }}
-            >
-              Away
-            </button>
+  <input
+    value={teamName}
+    onChange={(e) => setTeamName(e.target.value)}
+    className="border rounded-md px-3 py-2"
+    placeholder={`${teamTab === "home" ? "Home" : "Away"} Team`}
+  />
 
-            </div>
+  {/* Reset + Export */}
+  <button
+    onClick={resetAll}
+    className="px-3 py-2 bg-white border rounded-md shadow-sm hover:bg-gray-100"
+  >
+    Reset
+  </button>
+  <button
+    onClick={exportJSON}
+    className="px-3 py-2 bg-black text-white rounded-md shadow-sm"
+  >
+    Export
+  </button>
+</div>
 
-            <input
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-              className="border rounded-md px-3 py-2"
-              placeholder={`${teamTab === 'home' ? 'Home' : 'Away'} Team`}
-            />
-
-            {/* One Reset + one Export */}
-            <button onClick={resetAll} className="px-3 py-2 bg-white border rounded-md shadow-sm hover:bg-gray-100">
-              Reset
-            </button>
-            <button onClick={exportJSON} className="px-3 py-2 bg-black text-white rounded-md shadow-sm">
-              Export
-            </button>
-          </div>
         </header>
 
 
