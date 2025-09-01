@@ -3,9 +3,6 @@
 import React, { useMemo, useState } from 'react';
 import { marked } from 'marked';
 
-// optional: calmer defaults
-marked.setOptions({ mangle: false, headerIds: false });
-
 export default function AnalyzePanel() {
   const [jsonText, setJsonText] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
@@ -26,7 +23,7 @@ export default function AnalyzePanel() {
       setJsonText('');
       setFileName('');
     } finally {
-      e.target.value = ''; // allow reselecting same file
+      e.target.value = ''; // allow re-selecting the same file
     }
   }
 
@@ -53,8 +50,13 @@ export default function AnalyzePanel() {
     }
   }
 
-  // convert markdown → html once per change
-  const rendered = useMemo(() => marked.parse(report || ''), [report]);
+  // Convert markdown → html (no global setOptions; pass options inline if desired)
+  const rendered = useMemo(() => {
+    if (!report) return '';
+    // If your marked version supports options here, you can pass them:
+    // return marked.parse(report, { headerIds: false }) as string;
+    return marked.parse(report) as string;
+  }, [report]);
 
   return (
     <section className="bg-white border rounded-xl p-4">
@@ -84,7 +86,6 @@ export default function AnalyzePanel() {
               : 'No file selected'}
           </div>
 
-          {/* Optional read-only preview */}
           {jsonText && (
             <textarea
               readOnly
@@ -105,7 +106,6 @@ export default function AnalyzePanel() {
         </div>
       </div>
 
-      {/* Markdown output */}
       <div className="mt-4">
         <label className="text-sm font-medium mb-1 block">Report</label>
         <div
