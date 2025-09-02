@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { marked } from 'marked';
 
 type Locale = 'zh' | 'en';
@@ -76,10 +76,15 @@ export default function AnalyzePanel({
       setJsonText('');
       setFileName('');
     } finally {
-      e.currentTarget.value = ''; // allow re-selecting same file
+      // allow reselecting the same file
+      if (fileRef.current) fileRef.current.value = '';
     }
+    
   }
 
+  const fileRef = useRef<HTMLInputElement | null>(null);
+
+  // src/app/AnalyzePanel.tsx (only the analyze() change shown)
   async function analyze() {
     if (!jsonText) {
       alert(L.mustUpload);
@@ -91,11 +96,9 @@ export default function AnalyzePanel({
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonText, notes }),
+        body: JSON.stringify({ jsonText, notes, locale }), // 👈 include locale
       });
-
       const data: unknown = await res.json();
-
       if (!res.ok) {
         const msg =
           typeof data === 'object' && data !== null && 'error' in data
@@ -103,15 +106,13 @@ export default function AnalyzePanel({
             : L.requestFailed;
         throw new Error(msg);
       }
-
       const r =
         typeof data === 'object' &&
         data !== null &&
         'report' in data &&
         typeof (data as Record<string, unknown>).report === 'string'
-          ? ((data as Record<string, unknown>).report as string)
+          ? (data as Record<string, unknown>).report as string
           : L.noReport;
-
       setReport(r);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -120,6 +121,7 @@ export default function AnalyzePanel({
       setLoading(false);
     }
   }
+
 
   const rendered = useMemo(
     () => (report ? (marked.parse(report) as string) : ''),
@@ -143,11 +145,13 @@ export default function AnalyzePanel({
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">{L.uploadJson}</label>
           <input
+            ref={fileRef}
             type="file"
             accept=".json,application/json"
             onChange={handleFile}
             className="border rounded-md p-2 text-sm bg-white"
           />
+
           <div className="text-xs text-gray-500 mt-2">
             {fileName ? (
               <>

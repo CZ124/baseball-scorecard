@@ -1,22 +1,29 @@
+// src/app/api/analyze/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-
-// If you prefer Edge runtime, uncomment the next line
-// export const runtime = 'edge';
+export const runtime = 'nodejs';          // ensure Node runtime (env + libs work)
+export const dynamic = 'force-dynamic';   // don't cache results
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const MAX_BYTES = 2_000_000; // ~2MB guard
 
-// Small guard to avoid giant payloads
-const MAX_BYTES = 2_000_000; // ~2MB
+type Body = {
+  jsonText?: string;
+  notes?: string;
+  locale?: 'en' | 'zh';
+};
 
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'Missing OPENAI_API_KEY on server' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Missing OPENAI_API_KEY on server. Add it in Vercel → Project → Settings → Environment Variables.' },
+        { status: 500 }
+      );
     }
 
-    const { jsonText, notes } = await req.json();
+    const { jsonText, notes = '', locale = 'en' } = (await req.json()) as Body;
 
     if (typeof jsonText !== 'string' || !jsonText.trim()) {
       return NextResponse.json({ error: 'Missing or empty jsonText' }, { status: 400 });
@@ -25,12 +32,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'JSON is too large' }, { status: 413 });
     }
 
+    // Validate JSON early so we can show a friendly error
+    try {
+      JSON.parse(jsonText);
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON provided.' }, { status: 400 });
+    }
+
+    const languageHint =
+      locale === 'zh'
+        ? '你必须使用简体中文撰写整份报告，避免中英文混杂。'
+        : 'Write the entire report in clear, concise English.';
+
     const system = [
       'You are a meticulous baseball analyst.',
-      'Given a single-game scorecard JSON, produce a concise, insightful report.',
+      'Given a single-game scorecard JSON, produce a concise, insightful markdown report.',
       'Include: team overview, inning-by-inning scoring, standout players, basic per-batter stats if derivable (R, AB, H, RBI, BB, K), and notable moments.',
       'If some stats are not present or derivable, say so briefly—do not invent data.',
       'Use short sections with headers and bullet points where helpful.',
+      languageHint,
     ].join(' ');
 
     const user = [
@@ -44,7 +64,7 @@ export async function POST(req: NextRequest) {
     ].join('\n');
 
     const body = {
-      model: 'gpt-4o-mini', // solid + cost-effective; change if you prefer
+      model: 'gpt-4o-mini', // cost-effective, good quality
       temperature: 0.3,
       messages: [
         { role: 'system', content: system },
@@ -63,13 +83,15 @@ export async function POST(req: NextRequest) {
 
     if (!resp.ok) {
       const errText = await resp.text().catch(() => '');
-      return NextResponse.json({ error: `OpenAI error: ${errText || resp.statusText}` }, { status: 502 });
+      return NextResponse.json(
+        { error: `OpenAI error: ${errText || resp.statusText}` },
+        { status: 502 }
+      );
     }
 
     const data = await resp.json();
-    const content =
-      data?.choices?.[0]?.message?.content ||
-      'No content returned by the model.';
+    const content: string =
+      data?.choices?.[0]?.message?.content?.trim() || 'No content returned by the model.';
 
     return NextResponse.json({ report: content });
   } catch (err: unknown) {
