@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚾ Baseball Scorecard App
 
-## Getting Started
+A simple and powerful **baseball scorekeeping web app**.
+Keep track of every pitch, every hit, every run — and get **automatic stats & AI game reports** instantly.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🌟 What You Can Do
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 📝 Keep Score in Real Time
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+* Record pitches with one click (balls, strikes, fouls, dead balls).
+* Track every outcome: hits, walks, strikeouts, hit-by-pitch, errors, and more.
+* Visualize baserunners with **arrows around the diamond** (red for hits, black for advances, gray for errors).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 📊 Automatic Stats & Scoreboard
 
-## Learn More
+* See **inning-by-inning runs** update live.
+* Batter stats tracked automatically:
 
-To learn more about Next.js, take a look at the following resources:
+  * **AB (At-bats)**
+  * **H (Hits)**
+  * **RBI (Runs Batted In)**
+  * **BB (Walks)**
+  * **K (Strikeouts)**
+* Stats update in real time as you score the game.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 🤖 AI Game Report
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+* Upload or export a game JSON file.
+* Get an **AI-generated analysis** of the game, including:
 
-## Deploy on Vercel
+  * Team overview
+  * Inning summaries
+  * Standout players
+  * Key stats and moments
+* Reports are available in **English** or **Chinese** depending on your language setting.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🌍 Language Support
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Switch easily between **English (EN)** and **中文 (Chinese)** in the header.
+The interface and the AI game report will adapt to your choice.
+
+---
+
+## 🎮 How to Use
+
+### 1. Score a Game
+
+* **Click** on the diamond to move runners.
+* **Ctrl + Click** → Hit (red arrow).
+* **Shift + Click** → Error/FC (gray arrow).
+* **B + Click** → Walk or HBP (auto-advances batter).
+* **Number key (1–9) + Click** → Tag which batter caused the advancement.
+* **Pitch Tracker**: record pitches (S = strike, B = ball, F = foul, D = dead ball).
+
+👉 The app automatically adds outs after 3 strikes, and awards walks/HBPs after 4 balls or a dead ball.
+
+### 2. Check the Scoreboard
+
+At the top, see inning-by-inning runs and totals update instantly.
+
+### 3. View Batter Stats
+
+Each player’s stat line is calculated as you score — no extra work needed.
+
+### 4. AI Game Report
+
+* Scroll to the **AI Game Report** section.
+* Click **Upload JSON** to upload a saved scorecard file.
+* Add optional notes (opponent, weather, lineup info).
+* Click **Generate** → Get a full analysis in your chosen language.
+
+### 5. Save or Restart
+
+* **Export**: Save the whole game to JSON for later review or sharing.
+* **Reset**: Start fresh for a new game.
+
+---
+
+## 📱 Works Anywhere
+
+* Desktop, laptop, or tablet.
+* Nothing to install — just open the app in your browser.
+
+---
+
+## 🎯 Who It’s For
+
+* Coaches & scorers who want a **modern alternative to paper scorecards**.
+* Players who want to **track their own games**.
+* Fans who want to **analyze games with AI reports**.
+
+---
+
+## 🔮 Coming Soon
+
+* Advanced stats (OBP, SLG, OPS).
+* Cloud saving and multi-device sync.
+* Mobile-optimized interface.
+* Voice commands for scoring.
+
+---
+
+## 📜 License
+
+This app is free to use for everyone.
