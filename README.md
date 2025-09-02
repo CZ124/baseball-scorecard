@@ -105,3 +105,4 @@ Each player’s stat line is calculated as you score — no extra work needed.
 ## 📜 License
 
 This app is free to use for everyone.
+ 
