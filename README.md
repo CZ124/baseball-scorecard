@@ -1,5 +1,7 @@
 # ⚾ Baseball Scorecard App
 
+**Tool URL: https://baseball-scorecard-f4vc.vercel.app/**
+
 A simple and powerful **baseball scorekeeping web app**.
 Keep track of every pitch, every hit, every run — and get **automatic stats & AI game reports** instantly.
 
@@ -90,15 +92,6 @@ Each player’s stat line is calculated as you score — no extra work needed.
 * Coaches & scorers who want a **modern alternative to paper scorecards**.
 * Players who want to **track their own games**.
 * Fans who want to **analyze games with AI reports**.
-
----
-
-## 🔮 Coming Soon
-
-* Advanced stats (OBP, SLG, OPS).
-* Cloud saving and multi-device sync.
-* Mobile-optimized interface.
-* Voice commands for scoring.
 
 ---
 
