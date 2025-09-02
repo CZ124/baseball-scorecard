@@ -18,6 +18,139 @@ type RunSeg = {
 
 type PitchMark = 'B' | 'CS' | 'SS' | 'F' | 'D'; // Ball, Called Strike, Swinging Strike, Foul, Dead ball
 
+type Locale = 'en' | 'zh';
+
+const MESSAGES: Record<Locale, Record<string, string>> = {
+  en: {
+    // app
+    appTitle: '⚾ Baseball Scorecard',
+    appSubtitle: 'Pitch symbols, basepaths, outs & results per PA.',
+    // tabs & team
+    home: 'Home',
+    away: 'Away',
+    teamNamePlaceholderHome: 'Home Team',
+    teamNamePlaceholderAway: 'Away Team',
+    // toolbar
+    reset: 'Reset',
+    export: 'Export',
+    // sections
+    scoreboard: 'Scoreboard',
+    inning: 'Inning',
+    runs: "Runs",
+    battingOrder: 'Batting Order',
+    addPlayer: '+ Add Player',
+    removeLast: '− Remove Last',
+    batter: 'Batter',
+    inningN: 'Inning',
+    resetOuts: 'Reset outs',
+    // player row
+    playerNumberPlaceholder: '#',
+    playerNamePlaceholder: 'Player',
+    playerPosPlaceholder: 'Pos',
+    // pitch tracker
+    legend: 'Legend',
+    pitchBall: 'Ball',
+    pitchCalledStrike: 'Called Strike',
+    pitchSwingingStrike: 'Swinging Strike',
+    pitchFoul: 'Foul',
+    pitchDead: 'Dead Ball',
+    noPitchesYet: 'No pitches yet',
+    //types of balls
+    pitchesLabel: 'Pitches',
+    pitchCountB: 'B',
+    pitchCountCS: 'CS',
+    pitchCountSS: 'SS',
+    pitchCountF: 'F',
+    pitchCountD: 'D',
+    batterStats: 'Batter Stats',
+    // diamond/outs/outcome
+    diamondHelp: 'Click: advance • Ctrl+Click: hit (red) • Shift+Click: FC/Error (gray) • Right-click: reset runs',
+    outsHelp: 'Click: record next out • Right-click: reset outs from this batter down',
+    notesPlaceholder: 'Cell comments (RBI, situation, etc.)',
+    // outcome options
+    outcomeNone: '—',
+    outcomeInPlay: 'In Play',
+    outcomeWalk: 'Walk',
+    outcomeHBP: 'HBP',
+    outcomeK: 'K',
+    outcome1B: '1B',
+    outcome2B: '2B',
+    outcome3B: '3B',
+    outcomeHR: 'HR',
+    outcomeOut: 'Out',
+    cause: 'Cause: ',
+    press1to9: 'Press 1-9',
+    cellCommentsPlaceholder: 'Cell comments (RBI, situation, etc.)',
+    pitches: 'Pitches: ',
+    // EN
+    runKindHit: 'Hit',
+    runKindAdvance: 'Advance',
+    runKindError: 'FC/Error',
+    runNotePlaceholder: 'Short note…',
+    done: 'Done',
+  },
+  zh: {
+    appTitle: '⚾ 棒球记分卡',
+    appSubtitle: '投球符号、跑垒路径、出局与打席结果。',
+    home: '主队',
+    away: '客队',
+    teamNamePlaceholderHome: '主队名称',
+    teamNamePlaceholderAway: '客队名称',
+    reset: '重置',
+    export: '导出',
+    scoreboard: '计分板',
+    inning: '局数',
+    runs: '比分',
+    battingOrder: '打序',
+    addPlayer: '+ 添加球员',
+    removeLast: '− 删除末位',
+    batterStats: '打者数据',
+    batter: '打者',
+    inningN: '第',
+    resetOuts: '清除本局出局',
+    playerNumberPlaceholder: '号',
+    playerNamePlaceholder: '球员',
+    playerPosPlaceholder: '位置',
+    pitchesLabel: '投球数',
+    noPitchesYet: '尚无投球',
+    pitchCountB: '坏',
+    pitchCountCS: '看',
+    pitchCountSS: '挥',
+    pitchCountF: '界',
+    pitchCountD: '死',
+    legend: '图例',
+    pitchBall: '坏球',
+    pitchCalledStrike: '看打好球',
+    pitchSwingingStrike: '挥棒落空',
+    pitchFoul: '界外球',
+    pitchDead: '触身/死球',
+    diamondHelp: '单击：推进 • Ctrl：安打(红) • Shift：野选/失误(灰) • 右键：清空跑垒',
+    outsHelp: '单击：记录下一次出局 • 右键：从该打者向下清空本局出局',
+    notesPlaceholder: '备注（RBI、场况等）',
+    outcomeNone: '—',
+    outcomeInPlay: '击成界内',
+    outcomeWalk: '保送',
+    outcomeHBP: '触身球',
+    outcomeK: '三振',
+    outcome1B: '一安',
+    outcome2B: '二安',
+    outcome3B: '三安',
+    outcomeHR: '本垒打',
+    outcomeOut: '出局',
+    cause: '进垒原因',
+    press1to9: '请按 1-9',
+    pitches: '投球数: ',
+    // ZH
+    runKindHit: '安打',
+    runKindAdvance: '推进',
+    runKindError: '选择/失误',
+    runNotePlaceholder: '简短备注…',
+    done: '完成',
+    cellCommentsPlaceholder: '单元备注（打点、局面等）',
+
+  },
+};
+
 const PITCH_SYMBOL: Record<PitchMark, string> = {
   B: '—',   // ball
   CS: '◯',  // called strike
@@ -68,6 +201,9 @@ const DEFAULT_PLAYERS: Player[] = [
 ];
 
 const INNINGS = Array.from({ length: 9 }, (_, i) => i + 1);
+
+
+
 
 function makeEmptyRow(): Required<Cell>[] {
   return INNINGS.map(() => ({
@@ -121,8 +257,17 @@ function normalizeGrid(g: unknown, rows: number): Required<Cell>[][] {
 }
 
 // --- UI bits ---
-function PitchTracker({ seq, onChange }: { seq?: PitchMark[]; onChange: (s: PitchMark[]) => void }) {
+function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChange: (s: PitchMark[]) => void; locale: 'en' | 'zh'; t: (key: string) => string;}) {
   const safe = Array.isArray(seq) ? seq : [];
+
+  const counts = {
+    B: safe.filter((p) => p === 'B').length,
+    CS: safe.filter((p) => p === 'CS').length,
+    SS: safe.filter((p) => p === 'SS').length,
+    F: safe.filter((p) => p === 'F').length,
+    D: safe.filter((p) => p === 'D').length,
+  };
+
 
   const add = (m: PitchMark) => {
     onChange([...safe, m]);
@@ -154,6 +299,7 @@ function PitchTracker({ seq, onChange }: { seq?: PitchMark[]; onChange: (s: Pitc
     [next[a], next[b]] = [next[b], next[a]];
     onChange(next);
   };
+
 
   const balls = safe.filter((m) => m === 'B').length;
   const cs = safe.filter((m) => m === 'CS').length;   // called strikes
@@ -216,7 +362,7 @@ function PitchTracker({ seq, onChange }: { seq?: PitchMark[]; onChange: (s: Pitc
 
       {/* Pitch count */}
       <div className="text-xs text-gray-600">
-        Pitches: <span className="font-semibold">{total}</span>
+        {t('pitches')} <span className="font-semibold">{total}</span>
         <span className="ml-2">B:{balls}</span>
         <span className="ml-2">CS:{cs}</span>
         <span className="ml-2">SS:{ss}</span>
@@ -228,7 +374,7 @@ function PitchTracker({ seq, onChange }: { seq?: PitchMark[]; onChange: (s: Pitc
       {/* Sequence display */}
       <div className="flex items-center gap-1 text-base">
         {safe.length === 0 ? (
-          <span className="text-gray-400">No pitches yet</span>
+          <span className="text-gray-400">{t('noPitchesYet')}</span>
         ) : (
           safe.map((m, i) => (
             <button
@@ -239,25 +385,21 @@ function PitchTracker({ seq, onChange }: { seq?: PitchMark[]; onChange: (s: Pitc
                 onChange(next);
               }}
               draggable
-              onDragStart={(e) => setDragData(e, { source: 'seq', pitch: m, seqIndex: String(i) })}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const { from, pitch, seqIndex } = getDragData(e);
-                if (from === 'palette' && pitch) {
-                  replaceAt(i, pitch);
-                } else if (from === 'seq' && seqIndex >= 0) {
-                  swap(seqIndex, i);
-                }
-              }}
+              // ...drag handlers...
               className="inline-flex items-center justify-center w-6 h-6 border rounded bg-white hover:bg-blue-50 cursor-pointer"
-              title="Click to remove • Drag here to replace/swap"
+              title={t('noPitchesYet')}
             >
               {PITCH_SYMBOL[m]}
             </button>
           ))
         )}
       </div>
+
+      {/* Optional counts row (localized) */}
+      <div className="text-[11px] text-gray-500">
+        {t('pitchesLabel')}: {counts.B}{t('pitchCountB')}:{counts.CS}{t('pitchCountCS')}:{counts.SS}{t('pitchCountSS')}:{counts.F}{t('pitchCountF')}:{counts.D}{t('pitchCountD')}
+      </div>
+
 
       {/* <div className="text-[11px] text-gray-500">
         Legend: {PITCH_SYMBOL.B} ball · {PITCH_SYMBOL.CS} called strike · {PITCH_SYMBOL.SS} swinging strike · {PITCH_SYMBOL.F} foul · {PITCH_SYMBOL.D} dead ball
@@ -266,15 +408,35 @@ function PitchTracker({ seq, onChange }: { seq?: PitchMark[]; onChange: (s: Pitc
   );
 }
 
-function OutcomeSelect({ value, onChange }: { value?: Outcome; onChange: (v: Outcome) => void }) {
+function OutcomeSelect({
+  value,
+  onChange,
+  locale,
+  t,
+}: {
+  value?: Outcome;
+  onChange: (v: Outcome) => void;
+  locale: 'en' | 'zh';
+  t: (key: string) => string;
+}) {
   const val = (value ?? '—') as Outcome;
-  const opts: Outcome[] = ['—', 'In Play', 'Walk', 'HBP', 'K', '1B', '2B', '3B', 'HR', 'Out'];
+  // build labels on every render so they update with locale
+  const opts: { value: Outcome; label: string }[] = [
+    { value: '—',       label: t('outcomeNone') },
+    { value: 'In Play', label: t('outcomeInPlay') },
+    { value: 'Walk',    label: t('outcomeWalk') },
+    { value: 'HBP',     label: t('outcomeHBP') },
+    { value: 'K',       label: t('outcomeK') },
+    { value: '1B',      label: t('outcome1B') },
+    { value: '2B',      label: t('outcome2B') },
+    { value: '3B',      label: t('outcome3B') },
+    { value: 'HR',      label: t('outcomeHR') },
+    { value: 'Out',     label: t('outcomeOut') },
+  ];
   return (
     <select value={val} onChange={(e) => onChange(e.target.value as Outcome)} className="border rounded-md px-2 py-1 text-sm">
       {opts.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
+        <option key={o.value} value={o.value}>{o.label}</option>
       ))}
     </select>
   );
@@ -431,6 +593,11 @@ function Diamond({
     return [ (x1 + x2) / 2, (y1 + y2) / 2 ];
   };
 
+  const [locale, setLocale] = useState<Locale>(() => loadFromStorage('locale', 'en'));
+  useEffect(() => saveToStorage('locale', locale), [locale]);
+
+  const t = (key: string) => (MESSAGES[locale]?.[key] ?? key);
+
 
   return (
     <div className="relative select-none">
@@ -505,7 +672,7 @@ function Diamond({
       </svg>
 
       <div className="text-[10px] text-gray-600 text-center mt-0.5">
-        Cause: <span className="font-medium">{pendingCause ?? batterNumber}</span> <span className="text-gray-400">(press 1–9)</span>
+        {t('cause')} <span className="font-medium">{pendingCause ?? batterNumber}</span> <span className="text-gray-400">({t('press1to9')})</span>
       </div>
     </div>
   );
@@ -643,7 +810,9 @@ function BigCell({
   onNextOut,
   disabled,
   onResetFromHereDown,
-  batterNumber,                 // 👈 NEW
+  batterNumber,
+  locale,
+  t,
 }: {
   cell: Cell;
   onChange: (c: Required<Cell>) => void;
@@ -651,8 +820,13 @@ function BigCell({
   onNextOut: () => void;
   disabled?: boolean;
   onResetFromHereDown?: () => void;
-  batterNumber: number;         // 👈 NEW
+  batterNumber: number;
+  locale: 'en' | 'zh';
+  t: (key: string) => string;
+
 }) {
+
+  
   const merged: Required<Cell> = {
     pitchSeq: [],
     outcome: '—',
@@ -824,7 +998,11 @@ function BigCell({
           if (nextOutcome === 'K') {
             onNextOut();
           }
-        }}
+        }
+        
+      }
+      locale={locale}
+      t={t}
       />
 
 
@@ -842,45 +1020,48 @@ function BigCell({
           onSelectRun={(idx) => setEditingRunIdx(idx)}         
         />
         <OutsDots outs={outsDisplay} onNext={onNextOut} onResetFromHereDown={onResetFromHereDown ?? (() => {})} />
-        <OutcomeSelect value={merged.outcome} onChange={onOutcomeChange} />
+        <OutcomeSelect
+          value={merged.outcome}
+          onChange={onOutcomeChange}
+          locale={locale}
+          t={t}
+        />        
         </div>
 
-      {editingRunIdx !== null && merged.runs?.[editingRunIdx] && (
-      <div className="w-full">
-        <div className="flex items-center gap-2 w-full">
-          {/* label: only show type (no “Run 4 …” or arrows) */}
-          <span className="text-xs text-gray-600 shrink-0">
-            {merged.runs[editingRunIdx].kind === 'hit'
-              ? 'Hit'
-              : merged.runs[editingRunIdx].kind === 'advance'
-              ? 'Advance'
-              : 'FC/Error'}
-          </span>
+        {editingRunIdx !== null && merged.runs?.[editingRunIdx] && (
+          <div className="w-full">
+            <div className="flex items-center gap-2 w-full">
+              <span className="text-xs text-gray-600 shrink-0">
+                {merged.runs[editingRunIdx].kind === 'hit'
+                  ? t('runKindHit')
+                  : merged.runs[editingRunIdx].kind === 'advance'
+                  ? t('runKindAdvance')
+                  : t('runKindError')}
+              </span>
+              <input
+                className="flex-1 w-full text-xs border rounded px-2 py-1 bg-white"
+                placeholder={t('runNotePlaceholder')}
+                value={merged.runs[editingRunIdx].note ?? ''}
+                onChange={(e) => updateRunNote(editingRunIdx, e.target.value)}
+              />
+              <button
+                className="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-100"
+                onClick={() => setEditingRunIdx(null)}
+                title={t('done')}
+              >
+                {t('done')}
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* textbox fills the card width and stays inside */}
-          <input
-            className="flex-1 w-full text-xs border rounded px-2 py-1 bg-white"
-            placeholder="Short note…"
-            value={merged.runs[editingRunIdx].note ?? ''}
-            onChange={(e) => updateRunNote(editingRunIdx, e.target.value)}
-          />
 
-          <button
-            className="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-100"
-            onClick={() => setEditingRunIdx(null)}
-            title="Done"
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    )}
 
 
       <textarea
         value={merged.notes}
         onChange={(e) => onChange({ ...merged, notes: e.target.value })}
-        placeholder="Cell comments (RBI, situation, etc.)"
+        placeholder={t('cellCommentsPlaceholder')}
         className="w-full text-sm border rounded-md p-2 resize-none h-14"
       />
     </div>
@@ -900,6 +1081,11 @@ export default function ScorecardPage() {
   type TeamKey = 'home' | 'away';
   const TEAM_LABEL: Record<TeamKey, string> = { home: 'Home', away: 'Away' };
 
+  const [locale, setLocale] = useState<Locale>(() => loadFromStorage('locale', 'en'));
+  useEffect(() => saveToStorage('locale', locale), [locale]);
+
+  const t = (key: string) => (MESSAGES[locale]?.[key] ?? key);
+  
   // active tab
   const [teamTab, setTeamTab] = useState<TeamKey>('home');
 
@@ -1168,82 +1354,106 @@ export default function ScorecardPage() {
         {/* Header */}
         <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold">⚾ Baseball Scorecard</h1>
-            <p className="text-gray-600">Pitch symbols, basepath lines (Ctrl+Click toggles red), outs & results per PA.</p>
+            <h1 className="text-3xl font-bold">{t('appTitle')}</h1>
+            <p className="text-gray-600">{t('appSubtitle')}</p>
           </div>
-          
-
+  
           <div className="flex items-center gap-2 flex-wrap">
-  {/* Team tabs */}
-  <div className="inline-flex rounded-md border bg-white overflow-hidden">
-    <button
-      onClick={() => {
-        saveTeamToStorage(teamTab);
-        setTeamTab("home");
-        loadTeamFromStorage("home");
-      }}
-      className={`px-3 py-2 text-sm ${
-        teamTab === "home"
-          ? "bg-black text-white"
-          : "text-gray-700 hover:bg-gray-100"
-      }`}
-    >
-      Home
-    </button>
-    <button
-      onClick={() => {
-        saveTeamToStorage(teamTab);
-        setTeamTab("away");
-        loadTeamFromStorage("away");
-      }}
-      className={`px-3 py-2 text-sm ${
-        teamTab === "away"
-          ? "bg-black text-white"
-          : "text-gray-700 hover:bg-gray-100"
-      }`}
-    >
-      Away
-    </button>
-  </div>
-
-  <input
-    value={teamName}
-    onChange={(e) => setTeamName(e.target.value)}
-    className="border rounded-md px-3 py-2"
-    placeholder={`${teamTab === "home" ? "Home" : "Away"} Team`}
-  />
-
-  {/* Reset + Export */}
-  <button
-    onClick={resetAll}
-    className="px-3 py-2 bg-white border rounded-md shadow-sm hover:bg-gray-100"
-  >
-    Reset
-  </button>
-  <button
-    onClick={exportJSON}
-    className="px-3 py-2 bg-black text-white rounded-md shadow-sm"
-  >
-    Export
-  </button>
-</div>
-
+            {/* Team tabs */}
+            <div className="inline-flex rounded-md border bg-white overflow-hidden">
+              <button
+                onClick={() => {
+                  saveTeamToStorage(teamTab);
+                  setTeamTab("home");
+                  loadTeamFromStorage("home");
+                }
+              }
+                className={`px-3 py-2 text-sm ${
+                  teamTab === "home"
+                    ? "bg-black text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {t('home')}
+              </button>
+              <button
+                onClick={() => {
+                  saveTeamToStorage(teamTab);
+                  setTeamTab("away");
+                  loadTeamFromStorage("away");
+                }}
+                className={`px-3 py-2 text-sm ${
+                  teamTab === "away"
+                    ? "bg-black text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                {t('away')}
+              </button>
+            </div>
+  
+            <input
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              className="border rounded-md px-3 py-2"
+              placeholder={
+                teamTab === "home"
+                  ? t('teamNamePlaceholderHome')
+                  : t('teamNamePlaceholderAway')
+              }
+            />
+  
+            {/* Language switch */}
+            <div className="inline-flex rounded-md border bg-white overflow-hidden">
+              <button
+                onClick={() => setLocale('zh')}
+                className={`px-2.5 py-1.5 text-sm ${
+                  locale === 'zh'
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => setLocale('en')}
+                className={`px-2.5 py-1.5 text-sm ${
+                  locale === 'en'
+                    ? 'bg-black text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+  
+            {/* Reset + Export */}
+            <button
+              onClick={resetAll}
+              className="px-3 py-2 bg-white border rounded-md shadow-sm hover:bg-gray-100"
+            >
+              {t('reset')}
+            </button>
+            <button
+              onClick={exportJSON}
+              className="px-3 py-2 bg-black text-white rounded-md shadow-sm"
+            >
+              {t('export')}
+            </button>
+          </div>
         </header>
-
-
-        {/* Players editor */}
-        <section className="bg-white border rounded-xl p-4 mb-6">
-        {/* Scoreboard / line score */}
+  
+        {/* Scoreboard */}
         <section className="bg-white border rounded-xl p-3 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold">Scoreboard</h2>
+            <h2 className="font-semibold">{t('scoreboard')}</h2>
             <div className="text-sm text-gray-500">{teamName}</div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  <th className="text-left p-2">Inning</th>
+                  <th className="text-left p-2">{t('inning')}</th>
                   {INNINGS.map((inn) => (
                     <th key={inn} className="text-center p-2">{inn}</th>
                   ))}
@@ -1252,7 +1462,7 @@ export default function ScorecardPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-2 font-medium">Runs</td>
+                  <td className="p-2 font-medium">{t('runs')}</td>
                   {inningRuns.map((r, i) => (
                     <td key={i} className="text-center p-2">{r}</td>
                   ))}
@@ -1262,9 +1472,10 @@ export default function ScorecardPage() {
             </table>
           </div>
         </section>
-        
-
-          <h2 className="font-semibold mb-3">Batting Order</h2>
+  
+        {/* Batting Order */}
+        <section className="bg-white border rounded-xl p-4 mb-6">
+          <h2 className="font-semibold mb-3">{t('battingOrder')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {players.map((p, idx) => (
               <div key={idx} className="flex items-center gap-2">
@@ -1277,7 +1488,7 @@ export default function ScorecardPage() {
                     setPlayers(next);
                   }}
                   className="w-16 border rounded-md px-2 py-1"
-                  placeholder="#"
+                  placeholder={t('playerNumberPlaceholder')}
                 />
                 <input
                   value={p.name}
@@ -1287,7 +1498,7 @@ export default function ScorecardPage() {
                     setPlayers(next);
                   }}
                   className="flex-1 border rounded-md px-2 py-1"
-                  placeholder={`Player ${idx + 1}`}
+                  placeholder={`${t('playerNamePlaceholder')} ${idx + 1}`}
                 />
                 <select
                   value={p.position ?? ''}
@@ -1309,29 +1520,34 @@ export default function ScorecardPage() {
                   <option value="RF">RF</option>
                   <option value="DH">DH</option>
                 </select>
-
               </div>
             ))}
           </div>
           <div className="mt-3 flex gap-2">
-            <button onClick={() => setPlayers((prev) => [...prev, { name: `Player ${prev.length + 1}` }])} className="px-3 py-2 bg-white border rounded-md hover:bg-gray-100">
-              + Add Player
+            <button
+              onClick={() => setPlayers((prev) => [...prev, { name: `Player ${prev.length + 1}` }])}
+              className="px-3 py-2 bg-white border rounded-md hover:bg-gray-100"
+            >
+              {t('addPlayer')}
             </button>
-            <button onClick={() => setPlayers((p) => (p.length > 1 ? p.slice(0, -1) : p))} className="px-3 py-2 bg-white border rounded-md hover:bg-gray-100">
-              − Remove Last
+            <button
+              onClick={() => setPlayers((p) => (p.length > 1 ? p.slice(0, -1) : p))}
+              className="px-3 py-2 bg-white border rounded-md hover:bg-gray-100"
+            >
+              {t('removeLast')}
             </button>
           </div>
         </section>
-
-        {/* Batter stats */}
+  
+        {/* Batter Stats */}
         <section className="bg-white border rounded-xl p-4 mb-6">
-          <h2 className="font-semibold mb-3">Batter Stats</h2>
+          <h2 className="font-semibold mb-3">{t('batterStats')}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
                   <th className="text-left p-2">#</th>
-                  <th className="text-left p-2">Batter</th>
+                  <th className="text-left p-2">{t('batter')}</th>
                   <th className="text-center p-2">AB</th>
                   <th className="text-center p-2">H</th>
                   <th className="text-center p-2">RBI</th>
@@ -1345,7 +1561,7 @@ export default function ScorecardPage() {
                   return (
                     <tr key={r} className="border-b">
                       <td className="p-2">{p.number || r + 1}</td>
-                      <td className="p-2">{p.name || `Player ${r + 1}`}</td>
+                      <td className="p-2">{p.name || `${t('playerNamePlaceholder')} ${r + 1}`}</td>
                       <td className="text-center p-2">{s.ab}</td>
                       <td className="text-center p-2">{s.hits}</td>
                       <td className="text-center p-2">{s.rbi}</td>
@@ -1358,24 +1574,25 @@ export default function ScorecardPage() {
             </table>
           </div>
         </section>
-
-
+  
         {/* Scorecard table */}
         <section className="overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             <thead>
               <tr>
-                <th className="sticky left-0 bg-gray-50 z-10 top-0 text-left p-3 border-b">Batter</th>
+                <th className="sticky left-0 bg-gray-50 z-10 top-0 text-left p-3 border-b">
+                  {t('batter')}
+                </th>
                 {INNINGS.map((inn) => (
                   <th key={inn} className="text-center p-3 border-b min-w-[240px]">
                     <div className="flex items-center justify-center gap-2">
-                      <span>Inning {inn}</span>
+                      <span>{t('inningN')} {inn}</span>
                       <button
                         onClick={() => resetInning(inn - 1)}
                         className="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-100"
-                        title="Reset outs for this inning"
+                        title={t('resetOuts')}
                       >
-                        Reset outs
+                        {t('resetOuts')}
                       </button>
                     </div>
                   </th>
@@ -1387,9 +1604,13 @@ export default function ScorecardPage() {
                 <tr key={r}>
                   <th className="sticky left-0 bg-gray-50 z-10 text-left p-2 border-b align-top w-64">
                     <div className="font-medium flex items-center gap-2">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border">{p.number || '—'}</span>
-                      <span>{p.name || `Player ${r + 1}`}</span>
-                      <span className="text-xs text-gray-500">({p.position || '—'})</span>
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border">
+                        {p.number || '—'}
+                      </span>
+                      <span>{p.name || `${t('playerNamePlaceholder')} ${r + 1}`}</span>
+                      <span className="text-xs text-gray-500">
+                        ({p.position || '—'})
+                      </span>
                     </div>
                     <div className="text-[11px] text-gray-500">#{r + 1}</div>
                   </th>
@@ -1405,13 +1626,14 @@ export default function ScorecardPage() {
                             return next;
                           });
                         }}
+                        locale={locale}
+                        t={t}
                         outsDisplay={outsUpTo(c, r)}
                         onNextOut={() => recordOut(c, r)}
                         disabled={disabledAfterThirdOut(c, r)}
                         onResetFromHereDown={() => resetOutsFromHereDown(c, r)}
-                        batterNumber={r + 1}       // 👈 NEW
+                        batterNumber={r + 1}
                       />
-
                     </td>
                   ))}
                 </tr>
@@ -1419,12 +1641,12 @@ export default function ScorecardPage() {
             </tbody>
           </table>
         </section>
-
-              
-      <section className="mt-8">
-        <AnalyzePanel grid={grid} players={players} teamName={teamName} />
-      </section>
+  
+        <section className="mt-8">
+          <AnalyzePanel locale={locale} />
+        </section>
       </div>
     </main>
   );
+  
 }
