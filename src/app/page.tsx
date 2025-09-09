@@ -632,7 +632,8 @@ function Diamond({
             strokeLinecap="round"
             strokeLinejoin="round"
             markerEnd={marker}
-            strokeDasharray={dash}     
+            strokeDasharray={dash} 
+          ></polyline>    
 
 
         const [mx, my] = lastLegMid(seg.from, seg.to);
@@ -797,7 +798,6 @@ function hasDeadBall(seq: PitchMark[]): boolean {
 }
 
 
-// ⭐ Added onResetFromHereDown prop and passed through to OutsDots
 function BigCell({
   cell,
   onChange,
@@ -864,7 +864,6 @@ function BigCell({
   
 
 
-  // ✅ keep this ref here (inside BigCell), not in ScorecardPage
   const lastClickRef = useRef<{ t: number; kind: RunKind } | null>(null);
 
   const hitOutcomeFrom = (to: 1 | 2 | 3 | 4): Outcome =>
@@ -986,7 +985,6 @@ function BigCell({
             // runs/bases unchanged
           }
 
-          // 🚀 single state update prevents dropping the last pitch
           onChange(update);
 
           // record the out after state is saved (only for K)
@@ -1249,7 +1247,7 @@ export default function ScorecardPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    loadTeamFromStorage('home'); // ✅ team: TeamKey
+    loadTeamFromStorage('home');
   }, [mounted]);
   
 
@@ -1271,13 +1269,7 @@ export default function ScorecardPage() {
     URL.revokeObjectURL(url);
   };
 
-  // track outs for each inning (0..3)
-  
-
-  // call this when the dots button is clicked
-  
     // --- analytics helpers ---
-  // what counts as a hit for basic box stats
   const isHit = (o?: Outcome) => o === '1B' || o === '2B' || o === '3B' || o === 'HR';
 
   // count team runs by inning: any run segment that ends at home (to === 4)
@@ -1319,7 +1311,6 @@ export default function ScorecardPage() {
         if (outc === 'Walk') bb++;
         if (outc === 'K') k++;
   
-        // ✅ RBI: any runner who scores (to===4) in this inning,
         // credited to THIS batter if seg.byBatter matches their order #
         for (let rr = 0; rr < players.length; rr++) {
           const segs = grid[rr]?.[c]?.runs ?? [];
