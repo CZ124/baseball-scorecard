@@ -213,7 +213,7 @@ function makeEmptyRow(): Required<Cell>[] {
     outs: 0,
     pathColor: 'black',
     notes: '',
-    runs: [],              // 👈 add this
+    runs: [],       
   }));
 }
 
@@ -232,7 +232,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
-// Normalize any loaded grid (migrate old shapes to new)
+// Normalize any loaded grid
 function normalizeCell(c: unknown): Required<Cell> {
   const obj = (typeof c === 'object' && c !== null ? c : {}) as Record<string, unknown>;
   const pitchSeq = Array.isArray(obj.pitchSeq) ? (obj.pitchSeq as PitchMark[]) : [];
@@ -301,7 +301,7 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
   };
 
 
-  const balls = safe.filter((m) => m === 'B').length;
+  const balls = safe.filter((m) => m === 'B').length; // ball
   const cs = safe.filter((m) => m === 'CS').length;   // called strikes
   const ss = safe.filter((m) => m === 'SS').length;   // swinging strikes
   const fouls = safe.filter((m) => m === 'F').length; // fouls
@@ -395,7 +395,6 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
         )}
       </div>
 
-      {/* Optional counts row (localized) */}
       <div className="text-[11px] text-gray-500">
         {t('pitchesLabel')}: {counts.B}{t('pitchCountB')}:{counts.CS}{t('pitchCountCS')}:{counts.SS}{t('pitchCountSS')}:{counts.F}{t('pitchCountF')}:{counts.D}{t('pitchCountD')}
       </div>
@@ -563,7 +562,6 @@ function Diamond({
     if (pendingAward) {
       const cause = pendingCause ?? batterNumber;
       onAddRun('award', { byBatter: cause, note: pendingAward, /* optional */ });
-      // clear only the award arm (keep cause if you like)
       setPendingAward(null);
       setAwardUntil(0);
       return;
@@ -584,7 +582,7 @@ function Diamond({
   };
   
 
-  // midpoint on the *last* leg only (keeps badge off the diamond center)
+  // midpoint on the last leg only (keeps badge off the diamond center)
   const lastLegMid = (from: 0|1|2|3, to: 1|2|3|4): [number, number] => {
     // the leg is from (to-1) -> to
     const startBase = (to - 1) as 0 | 1 | 2 | 3;
@@ -634,14 +632,11 @@ function Diamond({
             strokeLinecap="round"
             strokeLinejoin="round"
             markerEnd={marker}
-            strokeDasharray={dash}           // 👈 this line
-          />
+            strokeDasharray={dash}     
 
 
-        // use the midpoint of the LAST leg so badges don’t fall into the diamond center
-        const [mx, my] = lastLegMid(seg.from, seg.to); // make sure lastLegMid helper exists
+        const [mx, my] = lastLegMid(seg.from, seg.to);
 
-        // ✅ define the badge text here
         const numLabel = typeof seg.byBatter === 'number' ? String(seg.byBatter) : '?';
 
         return (
@@ -957,7 +952,7 @@ function BigCell({
 
   return (
     <div
-      className={`bg-white rounded-xl p-2 shadow-sm border flex flex-col gap-2 min-w-[220px] min-w-0`}  // 👈 add min-w-0
+      className={`bg-white rounded-xl p-2 shadow-sm border flex flex-col gap-2 min-w-[220px] min-w-0`} 
     >
       <PitchTracker
         seq={merged.pitchSeq}
