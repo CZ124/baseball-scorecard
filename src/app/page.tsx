@@ -5,7 +5,10 @@ import { useCallback, /* ... */ } from 'react';
 import AnalyzePanel from './AnalyzePanel';
 
 // --- Types ---
+// kinds of runs
 type RunKind = 'hit' | 'advance' | 'error' | 'award'; 
+
+// sequence of runs, which base to which base, which batter caused the advancement, note, whether it is awarded
 type RunSeg = {
   from: 0 | 1 | 2 | 3;
   to: 1 | 2 | 3 | 4;
@@ -16,10 +19,13 @@ type RunSeg = {
   award?: 'Walk' | 'HBP';   
 };
 
+// types of pitches
 type PitchMark = 'B' | 'CS' | 'SS' | 'F' | 'D'; // Ball, Called Strike, Swinging Strike, Foul, Dead ball
 
+// choice of language (two at the moment)
 type Locale = 'en' | 'zh';
 
+// a looong list of the wording for each language
 const MESSAGES: Record<Locale, Record<string, string>> = {
   en: {
     // app
@@ -82,13 +88,15 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
     press1to9: 'Press 1-9',
     cellCommentsPlaceholder: 'Cell comments (RBI, situation, etc.)',
     pitches: 'Pitches: ',
-    // EN
+
     runKindHit: 'Hit',
     runKindAdvance: 'Advance',
     runKindError: 'FC/Error',
     runNotePlaceholder: 'Short note…',
     done: 'Done',
   },
+
+  // The keywords in Chinese
   zh: {
     appTitle: '⚾ 棒球记分卡',
     appSubtitle: '投球符号、跑垒路径、出局与打席结果。',
@@ -151,6 +159,7 @@ const MESSAGES: Record<Locale, Record<string, string>> = {
   },
 };
 
+// Pitch symbols for each type of pitch
 const PITCH_SYMBOL: Record<PitchMark, string> = {
   B: '—',   // ball
   CS: '◯',  // called strike
@@ -159,6 +168,7 @@ const PITCH_SYMBOL: Record<PitchMark, string> = {
   D: 'D',   // dead ball
 };
 
+// all possible outcomes for a batter
 type Outcome =
   | '—'
   | 'In Play'
@@ -171,16 +181,19 @@ type Outcome =
   | 'HR'
   | 'Out';
   
-
+// this is a cell
+// within the cell there are components of pitch sequence, outcome, base advancement status, outs, pathcolor, notes, and runs
 type Cell = {
   pitchSeq?: PitchMark[];
   outcome?: Outcome;
   bases?: 0 | 1 | 2 | 3 | 4;
   outs?: 0 | 1 | 2 | 3;
-  pathColor?: 'black' | 'red';
+  pathColor?: 'black' | 'red' | 'gray';
   notes?: string;
   runs?: RunSeg[];
 };
+
+// this is a player
 
 type Player = {
   name: string;
@@ -188,6 +201,8 @@ type Player = {
   position?: string;
 };
 
+// these are the default batters, with default name, number, position
+// all subject to change and customization
 const DEFAULT_PLAYERS: Player[] = [
   { name: 'Leadoff', number: '2', position: 'CF' },
   { name: 'Two-Hole', number: '7', position: 'SS' },
@@ -200,11 +215,12 @@ const DEFAULT_PLAYERS: Player[] = [
   { name: 'Nine', number: '31', position: 'P' },
 ];
 
+// innings, 9 in total as normal
 const INNINGS = Array.from({ length: 9 }, (_, i) => i + 1);
 
 
-
-
+// function to make an empty row of an inning
+// loops through each of the innings (9 as set earlier) and creates 9 innings, essentially
 function makeEmptyRow(): Required<Cell>[] {
   return INNINGS.map(() => ({
     pitchSeq: [],
@@ -218,6 +234,8 @@ function makeEmptyRow(): Required<Cell>[] {
 }
 
 // --- Storage helpers ---
+// save and load from storage functions
+// fallback protection
 function saveToStorage(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -233,6 +251,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 // Normalize any loaded grid
+// normalizing means setting each component within the cell to set midding parts to defaults, otherwise fill with parameter c
 function normalizeCell(c: unknown): Required<Cell> {
   const obj = (typeof c === 'object' && c !== null ? c : {}) as Record<string, unknown>;
   const pitchSeq = Array.isArray(obj.pitchSeq) ? (obj.pitchSeq as PitchMark[]) : [];
@@ -245,9 +264,13 @@ function normalizeCell(c: unknown): Required<Cell> {
   return { pitchSeq, outcome, bases, outs, pathColor, notes, runs };
 }
 
+// similar to above, normalize a grid specifically
 function normalizeGrid(g: unknown, rows: number): Required<Cell>[][] {
+  // if grid is not an array, treat as empty []
   const grid = Array.isArray(g) ? (g as unknown[]) : [];
   const out: Required<Cell>[][] = [];
+
+  // for r from 0 to rows-1, normalize each inning
   for (let r = 0; r < rows; r++) {
     const row = Array.isArray(grid[r]) ? (grid[r] as unknown[]) : [];
     const normalizedRow: Required<Cell>[] = INNINGS.map((_, c) => normalizeCell(row[c]));
@@ -257,9 +280,11 @@ function normalizeGrid(g: unknown, rows: number): Required<Cell>[][] {
 }
 
 // --- UI bits ---
+// pitch tracker big function
 function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChange: (s: PitchMark[]) => void; locale: 'en' | 'zh'; t: (key: string) => string;}) {
   const safe = Array.isArray(seq) ? seq : [];
 
+  // counting the number of pitches for each pitch type
   const counts = {
     B: safe.filter((p) => p === 'B').length,
     CS: safe.filter((p) => p === 'CS').length,
@@ -269,38 +294,43 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
   };
 
 
+  // add a pitch
+  // all pitches that are still safe + the one just added
   const add = (m: PitchMark) => {
     onChange([...safe, m]);
   };
 
+  // drag and drop helper, add key value pair to the dataTransfer
+  // enables the dragging of pitch to be copied to the pitch tracker
   const setDragData = (e: React.DragEvent, data: Record<string, string>) => {
     Object.entries(data).forEach(([k, v]) => e.dataTransfer.setData(k, v));
     e.dataTransfer.effectAllowed = "copyMove";
   };
 
   
-  const getDragData = (e: React.DragEvent) => {
-    const from = e.dataTransfer.getData("source");
-    const pitch = e.dataTransfer.getData("pitch") as PitchMark | "";
-    const indexRaw = e.dataTransfer.getData("seqIndex");
-    const seqIndex = indexRaw ? Number(indexRaw) : -1;
-    return { from, pitch, seqIndex };
-  };
+  // const getDragData = (e: React.DragEvent) => {
+  //   const from = e.dataTransfer.getData("source");
+  //   const pitch = e.dataTransfer.getData("pitch") as PitchMark | "";
+  //   const indexRaw = e.dataTransfer.getData("seqIndex");
+  //   const seqIndex = indexRaw ? Number(indexRaw) : -1;
+  //   return { from, pitch, seqIndex };
+  // };
 
-  const replaceAt = (idx: number, m: PitchMark) => {
-    const next = [...safe];
-    next[idx] = m;
-    onChange(next);
-  };
+  // const replaceAt = (idx: number, m: PitchMark) => {
+  //   const next = [...safe];
+  //   next[idx] = m;
+  //   onChange(next);
+  // };
 
-  const swap = (a: number, b: number) => {
-    if (a === b || a < 0 || b < 0) return;
-    const next = [...safe];
-    [next[a], next[b]] = [next[b], next[a]];
-    onChange(next);
-  };
+  // const swap = (a: number, b: number) => {
+  //   if (a === b || a < 0 || b < 0) return;
+  //   const next = [...safe];
+  //   [next[a], next[b]] = [next[b], next[a]];
+  //   onChange(next);
+  // };
 
 
+  // counts each ball type without changing the total pitch array
   const balls = safe.filter((m) => m === 'B').length; // ball
   const cs = safe.filter((m) => m === 'CS').length;   // called strikes
   const ss = safe.filter((m) => m === 'SS').length;   // swinging strikes
@@ -309,9 +339,14 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
   const total = safe.length;
 
 
+  // the front end component of the pitch tracker
   return (
     <div className="flex flex-col gap-2">
       {/* Buttons row */}
+
+      
+      {/* for each of the pitch type, click adds it, drag adds it, and it stores its title */}
+      
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => add('B')}
@@ -376,6 +411,7 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
         {safe.length === 0 ? (
           <span className="text-gray-400">{t('noPitchesYet')}</span>
         ) : (
+          /* maps all of the pitches recorded in the pitch tracker, otherwise, show no pitches yet */
           safe.map((m, i) => (
             <button
               key={i}
@@ -385,7 +421,7 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
                 onChange(next);
               }}
               draggable
-              // ...drag handlers...
+              
               className="inline-flex items-center justify-center w-6 h-6 border rounded bg-white hover:bg-blue-50 cursor-pointer"
               title={t('noPitchesYet')}
             >
@@ -396,6 +432,7 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
       </div>
 
       <div className="text-[11px] text-gray-500">
+        {/* show each of the counts for each type of pitch */}
         {t('pitchesLabel')}: {counts.B}{t('pitchCountB')}:{counts.CS}{t('pitchCountCS')}:{counts.SS}{t('pitchCountSS')}:{counts.F}{t('pitchCountF')}:{counts.D}{t('pitchCountD')}
       </div>
 
@@ -407,12 +444,14 @@ function PitchTracker({ seq, onChange, locale, t }: { seq?: PitchMark[]; onChang
   );
 }
 
+// outcome selection function dropdown that allows users to choose the outcome of batter
 function OutcomeSelect({
   value,
   onChange,
   locale,
   t,
 }: {
+  // for each outcome display the outcome selected, otherwise leave as —
   value?: Outcome;
   onChange: (v: Outcome) => void;
   locale: 'en' | 'zh';
@@ -420,6 +459,7 @@ function OutcomeSelect({
 }) {
   const val = (value ?? '—') as Outcome;
   // build labels on every render so they update with locale
+  // this is a list of the pairs of value and label of each outcome
   const opts: { value: Outcome; label: string }[] = [
     { value: '—',       label: t('outcomeNone') },
     { value: 'In Play', label: t('outcomeInPlay') },
@@ -434,6 +474,7 @@ function OutcomeSelect({
   ];
   return (
     <select value={val} onChange={(e) => onChange(e.target.value as Outcome)} className="border rounded-md px-2 py-1 text-sm">
+      {/* maps outcome according to dropdown */}
       {opts.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
@@ -441,7 +482,7 @@ function OutcomeSelect({
   );
 }
 
-// Diamond
+// Diamond big function
 function Diamond({
   bases,
   runs,
@@ -457,20 +498,25 @@ function Diamond({
   onResetRuns?: () => void;
   onSelectRun?: (index: number) => void;  
 }) {
+
   const [pendingCause, setPendingCause] = useState<number | null>(null);
   const [pendingUntil, setPendingUntil] = useState<number>(0);
   const b = (typeof bases === 'number' ? bases : 0) as 0 | 1 | 2 | 3 | 4;
   const [pendingAward, setPendingAward] = useState<'Walk' | 'HBP' | null>(null);
   const [awardUntil, setAwardUntil] = useState(0);
 
-
+  // corner coordinates
   const corner = (base: 0 | 1 | 2 | 3 | 4): [number, number] =>
     base === 0 ? [50, 95] : base === 1 ? [95, 50] : base === 2 ? [50, 5] : base === 3 ? [5, 50] : [50, 95];
 
+  // return corner corrdinates between the starting and ending base
+  // all possible starting bases: 0,1,2,3
+  // all possible ending bases: 1,2,3,4
   const cornersBetween = (from: 0 | 1 | 2 | 3, to: 1 | 2 | 3 | 4): [number, number][] => {
     const order: (0 | 1 | 2 | 3 | 4)[] = [0, 1, 2, 3, 4];
     const pts: [number, number][] = [];
     let cur = from;
+    // before reaching ending base, advance
     while (cur !== to) {
       pts.push(corner(cur));
       const idx = order.indexOf(cur);
@@ -480,6 +526,7 @@ function Diamond({
     return pts;
   };
 
+    // the ui display of the color and arrow of each type of advancement
   const strokePropsFor = (kind: RunKind) =>
     kind === 'hit'
       ? { stroke: '#dc2626', dash: undefined, marker: 'url(#arrow-red)' }
@@ -487,13 +534,8 @@ function Diamond({
       ? { stroke: '#111827', dash: undefined, marker: 'url(#arrow-black)' }
       : kind === 'error'
       ? { stroke: '#6b7280', dash: undefined, marker: 'url(#arrow-gray)' }
-      : { stroke: '#111827', dash: '3 3', marker: 'url(#arrow-black)' }; // 👈 award = dotted black
+      : { stroke: '#111827', dash: '3 3', marker: 'url(#arrow-black)' }; // any runkind that is not the three types above
   
-
-  const midOf = (pts: [number, number][]) => {
-    const a = pts[0], z = pts[pts.length - 1];
-    return [(a[0] + z[0]) / 2, (a[1] + z[1]) / 2] as [number, number];
-  };
 
   // press 1–9 to set "cause", then click to add
   useEffect(() => {
@@ -559,14 +601,17 @@ function Diamond({
   const handleSvgClick: React.MouseEventHandler<SVGSVGElement> = (e) => {
     e.preventDefault();
   
+    // if there is a batter cause that is pressed, set to that
+    // otherwise, just set to current batter as the cause for advancement
     if (pendingAward) {
       const cause = pendingCause ?? batterNumber;
-      onAddRun('award', { byBatter: cause, note: pendingAward, /* optional */ });
+      onAddRun('award', { byBatter: cause, note: pendingAward, });
       setPendingAward(null);
       setAwardUntil(0);
       return;
     }
-  
+    
+    // shift for error, ctrl for hit, otherwise normal advancement
     const kind: RunKind = e.shiftKey ? 'error' : e.ctrlKey ? 'hit' : 'advance';
     const cause = pendingCause ?? batterNumber;
     const meta: { byBatter?: number; note?: string } = { byBatter: cause };
@@ -597,6 +642,7 @@ function Diamond({
   const t = (key: string) => (MESSAGES[locale]?.[key] ?? key);
 
 
+  // the front end components
   return (
     <div className="relative select-none">
       <svg
@@ -676,12 +722,13 @@ function Diamond({
 
 
 
-
+// out dots big function
 function OutsDots({
   outs,
   onNext,
   onResetFromHereDown,
 }: {
+  // max three outs
   outs: 0 | 1 | 2 | 3;
   onNext: () => void;
   onResetFromHereDown: () => void;
@@ -707,73 +754,74 @@ function OutsDots({
   );
 }
 
-function RunMetaEditor({
-  onAdd,
-}: {
-  onAdd: (kind: RunKind, dist: 1 | 2 | 3 | 4, byBatter?: number, note?: string) => void;
-}) {
-  const [kind, setKind] = useState<RunKind>('advance');
-  const [dist, setDist] = useState<1 | 2 | 3 | 4>(1);
-  const [by, setBy] = useState<string>(''); // store as string; coerce on add
-  const [note, setNote] = useState<string>('');
+// function RunMetaEditor({
+//   onAdd,
+// }: {
+//   onAdd: (kind: RunKind, dist: 1 | 2 | 3 | 4, byBatter?: number, note?: string) => void;
+// }) {
+//   const [kind, setKind] = useState<RunKind>('advance');
+//   const [dist, setDist] = useState<1 | 2 | 3 | 4>(1);
+//   const [by, setBy] = useState<string>(''); // store as string; coerce on add
+//   const [note, setNote] = useState<string>('');
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <select className="text-xs border rounded px-2 py-1" value={kind} onChange={(e) => setKind(e.target.value as RunKind)}>
-        <option value="hit">Hit (red)</option>
-        <option value="advance">Advance (black)</option>
-        <option value="error">FC/Error (black dashed)</option>
-      </select>
-      <select className="text-xs border rounded px-2 py-1" value={dist} onChange={(e) => setDist(Number(e.target.value) as 1 | 2 | 3 | 4)}>
-        <option value={1}>+1 base</option>
-        <option value={2}>+2 bases</option>
-        <option value={3}>+3 bases</option>
-        <option value={4}>Home (score)</option>
-      </select>
-      <input className="text-xs border rounded px-2 py-1 w-20" placeholder="by # (opt)" value={by} onChange={(e) => setBy(e.target.value)} />
-      <input className="text-xs border rounded px-2 py-1 flex-1 min-w-[140px]" placeholder="note (opt)" value={note} onChange={(e) => setNote(e.target.value)} />
-      <button
-        className="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-100"
-        onClick={() => onAdd(kind, dist, by ? Number(by) : undefined, note || undefined)}
-      >Add</button>
-    </div>
-  );
-}
+//   return (
+//     <div className="flex flex-wrap items-center gap-2">
+//       <select className="text-xs border rounded px-2 py-1" value={kind} onChange={(e) => setKind(e.target.value as RunKind)}>
+//         <option value="hit">Hit (red)</option>
+//         <option value="advance">Advance (black)</option>
+//         <option value="error">FC/Error (black dashed)</option>
+//       </select>
+//       <select className="text-xs border rounded px-2 py-1" value={dist} onChange={(e) => setDist(Number(e.target.value) as 1 | 2 | 3 | 4)}>
+//         <option value={1}>+1 base</option>
+//         <option value={2}>+2 bases</option>
+//         <option value={3}>+3 bases</option>
+//         <option value={4}>Home (score)</option>
+//       </select>
+//       <input className="text-xs border rounded px-2 py-1 w-20" placeholder="by # (opt)" value={by} onChange={(e) => setBy(e.target.value)} />
+//       <input className="text-xs border rounded px-2 py-1 flex-1 min-w-[140px]" placeholder="note (opt)" value={note} onChange={(e) => setNote(e.target.value)} />
+//       <button
+//         className="text-xs px-2 py-1 border rounded bg-white hover:bg-gray-100"
+//         onClick={() => onAdd(kind, dist, by ? Number(by) : undefined, note || undefined)}
+//       >Add</button>
+//     </div>
+//   );
+// }
 
-function RunComments({
-  runs,
-  onChangeNote,
-}: {
-  runs: RunSeg[] | undefined;
-  onChangeNote: (index: number, note: string) => void;
-}) {
-  const list = runs ?? [];
-  if (!list.length) return null;
-  return (
-    <div className="mt-2 border rounded-md p-2 bg-gray-50">
-      <div className="text-xs font-medium text-gray-700 mb-1">Run comments</div>
-      <div className="flex flex-col gap-2">
-        {list.map((seg, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <span className="text-xs text-gray-500 shrink-0 w-28">
-              {seg.kind === 'hit' ? 'Hit' : seg.kind === 'advance' ? 'Advance' : 'FC/Error'}
-              {' · '}
-              {seg.from}→{seg.to}
-              {typeof seg.byBatter === 'number' ? ` · by #${seg.byBatter}` : ''}
-            </span>
-            <input
-              value={seg.note ?? ''}
-              onChange={(e) => onChangeNote(i, e.target.value)}
-              placeholder="Add a note…"
-              className="flex-1 text-xs border rounded px-2 py-1 bg-white"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// function RunComments({
+//   runs,
+//   onChangeNote,
+// }: {
+//   runs: RunSeg[] | undefined;
+//   onChangeNote: (index: number, note: string) => void;
+// }) {
+//   const list = runs ?? [];
+//   if (!list.length) return null;
+//   return (
+//     <div className="mt-2 border rounded-md p-2 bg-gray-50">
+//       <div className="text-xs font-medium text-gray-700 mb-1">Run comments</div>
+//       <div className="flex flex-col gap-2">
+//         {list.map((seg, i) => (
+//           <div key={i} className="flex items-start gap-2">
+//             <span className="text-xs text-gray-500 shrink-0 w-28">
+//               {seg.kind === 'hit' ? 'Hit' : seg.kind === 'advance' ? 'Advance' : 'FC/Error'}
+//               {' · '}
+//               {seg.from}→{seg.to}
+//               {typeof seg.byBatter === 'number' ? ` · by #${seg.byBatter}` : ''}
+//             </span>
+//             <input
+//               value={seg.note ?? ''}
+//               onChange={(e) => onChangeNote(i, e.target.value)}
+//               placeholder="Add a note…"
+//               className="flex-1 text-xs border rounded px-2 py-1 bg-white"
+//             />
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// }
 
+// function for number of strikes (three is an out)
 function countStrikes(seq: PitchMark[]): number {
   let s = 0;
   for (const m of seq) {
@@ -793,11 +841,12 @@ function countBalls(seq: PitchMark[]): number {
   return seq.filter((m) => m === 'B').length;
 }
 
+// special case: once a deadball happens, it is an automatic HBP
 function hasDeadBall(seq: PitchMark[]): boolean {
   return seq.includes('D'); // first D ⇒ HBP
 }
 
-
+// bigcell is the big cell that contains the diamond,, etc.
 function BigCell({
   cell,
   onChange,
@@ -849,6 +898,7 @@ function BigCell({
         setPendingBy(num);
       }
     };
+    // keeps the advancement to its own cell
     el.addEventListener('keydown', onKey);
     return () => el.removeEventListener('keydown', onKey);
   }, []);
@@ -869,20 +919,26 @@ function BigCell({
   const hitOutcomeFrom = (to: 1 | 2 | 3 | 4): Outcome =>
     to === 1 ? '1B' : to === 2 ? '2B' : to === 3 ? '3B' : 'HR';
   
+  // depending on the outcome o, it will be return array of RunSeg objects from and to, or empty if no advancement.
   const firstRunForOutcome = (o: Outcome, by: number): RunSeg[] => {
+    // if any of these base advancements, they cause an ending base of 1b, 2b, 3b, or 4b (hr)
     if (o === '1B' || o === '2B' || o === '3B' || o === 'HR') {
       const to = (o === '1B' ? 1 : o === '2B' ? 2 : o === '3B' ? 3 : 4) as 1 | 2 | 3 | 4;
       return [{ from: 0, to, kind: 'hit', byBatter: by }];
+      // returns an array of from, to, kind, and batter
     }
+    // otherwise, depending on walk or hbp, these are all one base awards
     if (o === 'Walk') {
-      return [{ from: 0, to: 1, kind: 'award', byBatter: by, award: 'Walk' }]; // 👈 dotted
+      return [{ from: 0, to: 1, kind: 'award', byBatter: by, award: 'Walk' }];
     }
     if (o === 'HBP') {
-      return [{ from: 0, to: 1, kind: 'award', byBatter: by, award: 'HBP' }]; // 👈 dotted
+      return [{ from: 0, to: 1, kind: 'award', byBatter: by, award: 'HBP' }]; 
     }
+    // otherwise just return empty
     return [];
   };
   
+  // outcome dropdown is synchronized from the run clicks
   const maybeSyncOutcomeFromRuns = (runs: RunSeg[], prevOutcome: Outcome): Outcome => {
     const first = runs[0];
     if (first && first.from === 0) {
@@ -893,7 +949,7 @@ function BigCell({
   };
   
 
-
+  // to add a run segment, provide the kind, batter, and note
   const addRunSegment = (kind: RunKind, meta?: { byBatter?: number; note?: string }) => {
     
   
@@ -903,29 +959,42 @@ function BigCell({
     const now = Date.now();
   
     // quick extend same-kind clicks
+    // when last click lc happens, proceed
     const lc = lastClickRef.current;
+    // if last click is the same type of clicks always, and it is within a certain time
     if (lc && lc.kind === kind && now - lc.t < 350 && runs.length) {
       const last = runs[runs.length - 1];
+      // if the last click did not bring runner to base 4 (home)
       if (last.to === from && last.to < 4) {
+        // advance base
         const extended = { ...last, to: (Math.min(4, last.to + 1) as 1 | 2 | 3 | 4) };
+        // end at last click (extend previous runs)
         const nextRuns = [...runs.slice(0, -1), extended];
+        // update the last time clicked to now
         lastClickRef.current = { t: now, kind };
+        // sync outcomes
         const nextOutcome = maybeSyncOutcomeFromRuns(nextRuns, merged.outcome);
+        // update runs and bases and outcome based on the clicks
         onChange({ ...merged, runs: nextRuns, bases: extended.to, outcome: nextOutcome });
         return;
       }
     }
   
+    // to is one of the bases (1b, 2b, 3b, home)
     const to = (Math.min(4, from + 1) as 1 | 2 | 3 | 4);
+    // awardtype is the type that caused the award advancement (hpb or walk)
     const awardType = (kind === 'award' && (meta?.note === 'HBP' ? 'HBP' : 'Walk')) as 'Walk' | 'HBP' | undefined;
   
+    // run segment of award
     const seg: RunSeg = kind === 'award'
       ? { from, to, kind, byBatter: meta?.byBatter, note: meta?.note, award: awardType }
       : { from, to, kind, ...meta };
   
+    //add segment to runs and update last click reference
     const nextRuns: RunSeg[] = [...runs, seg];
     lastClickRef.current = { t: now, kind };
   
+    // determine next outcome
     const nextOutcome =
       kind === 'hit'
         ? hitOutcomeFrom(to)
@@ -937,13 +1006,14 @@ function BigCell({
   };
   
   
-
-  
+  // edited run's index
   const [editingRunIdx, setEditingRunIdx] = useState<number | null>(null);
 
+  // update a run's note after it is edited
   const updateRunNote = (index: number, note: string) => {
-    const runs = merged.runs ?? [];
-    const next = runs.map((r, i) => (i === index ? { ...r, note } : r));
+    const runs = merged.runs ?? []; // get existing runs
+    const next = runs.map((r, i) => (i === index ? { ...r, note } : r)); // replace the note at the index that is being edited
+    // the run is updated
     onChange({ ...merged, runs: next });
   };
 
@@ -952,11 +1022,13 @@ function BigCell({
   return (
     <div
       className={`bg-white rounded-xl p-2 shadow-sm border flex flex-col gap-2 min-w-[220px] min-w-0`} 
+      disabled={disabled}
     >
       <PitchTracker
+        disabled={disabled}
         seq={merged.pitchSeq}
         onChange={(seq) => {
-          // derive auto outcomes from the *new* seq
+          // derive auto outcomes from the new seq
           const strikes = countStrikes(seq);
           const balls = countBalls(seq);
           const dead = hasDeadBall(seq);
@@ -1010,7 +1082,8 @@ function BigCell({
             onChange({ ...merged, runs: [], bases: 0, outcome: '—' })
           }
 
-          onSelectRun={(idx) => setEditingRunIdx(idx)}         
+          onSelectRun={(idx) => setEditingRunIdx(idx)} 
+          disabled={disabled}        
         />
         <OutsDots outs={outsDisplay} onNext={onNextOut} onResetFromHereDown={onResetFromHereDown ?? (() => {})} />
         <OutcomeSelect
@@ -1018,6 +1091,7 @@ function BigCell({
           onChange={onOutcomeChange}
           locale={locale}
           t={t}
+          disabled={disabled}
         />        
         </div>
 
@@ -1065,11 +1139,13 @@ function BigCell({
 
 
 
-
+// scorecard page (the big page with everything except the analytics section)
 export default function ScorecardPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // get team name from storage
+  // their lable is either home or away
   const [teamName, setTeamName] = useState(() => loadFromStorage('teamName', 'My Team'));
   type TeamKey = 'home' | 'away';
   const TEAM_LABEL: Record<TeamKey, string> = { home: 'Home', away: 'Away' };
@@ -1141,6 +1217,7 @@ export default function ScorecardPage() {
   };
   const [players, setPlayers] = useState<Player[]>(migratePlayers);
 
+  // initialize grids
   const initialGrid = useMemo(() => players.map(() => makeEmptyRow()), []);
   const [grid, setGrid] = useState<Required<Cell>[][]>(() => normalizeGrid(loadFromStorage('grid', initialGrid), players.length));
 
@@ -1154,12 +1231,15 @@ export default function ScorecardPage() {
     return last;
   };
 
+  // three out and every cell that is not the range of batters who batted this inning is disabled
   const disabledAfterThirdOut = (c: number, r: number): boolean => {
     const up = outsUpTo(c, r);
     const thisCellOuts = grid[r]?.[c]?.outs ?? 0;
     return up === 3 && thisCellOuts !== 3;
   };
 
+  
+  // reset inning outs 
   const resetInning = (c: number) => {
     setInningOuts((prev) => {
       const next = [...prev];
@@ -1167,6 +1247,7 @@ export default function ScorecardPage() {
       return next;
     });
 
+    // update the grid
     setGrid((g) => {
       const next = g.map((row) => row.slice());
       for (let r = 0; r < next.length; r++) {
@@ -1178,6 +1259,7 @@ export default function ScorecardPage() {
     });
   };
 
+  // recompute the outs in an inning to get the outs so far
   const recomputeInningOuts = (c: number, g: Required<Cell>[][]): 0 | 1 | 2 | 3 => {
     let maxOuts: 0 | 1 | 2 | 3 = 0;
     for (let r = 0; r < g.length; r++) {
@@ -1187,9 +1269,11 @@ export default function ScorecardPage() {
     return maxOuts;
   };
 
+  // reset inning outs only here down, not touching outs before this cell
   const resetOutsFromHereDown = (c: number, startRow: number) => {
     setGrid((g) => {
       const next = g.map((row) => row.slice());
+      // for every cell onwards, return back to the previous out numbers
       for (let r = startRow; r < next.length; r++) {
         if (next[r]?.[c]) next[r][c] = { ...next[r][c], outs: 0 };
       }
@@ -1207,15 +1291,19 @@ export default function ScorecardPage() {
     Array(INNINGS.length).fill(0) as (0 | 1 | 2 | 3)[]
   );
   
+  // keep record of outs
+  // one, two, or three outs, more than that is not possible
   const recordOut = (inningIdx: number, batterIdx: number) => {
     const newCount = Math.min(3, (inningOuts[inningIdx] ?? 0) + 1) as 0 | 1 | 2 | 3;
   
+    // add the next out
     setInningOuts((prev) => {
       const next = [...prev] as (0 | 1 | 2 | 3)[];
       next[inningIdx] = newCount;
       return next;
     });
   
+    // update next cell with the new number of outs
     setGrid((g) => {
       const next = g.map((row) => row.slice());
       const cell = next[batterIdx][inningIdx] ?? { pitchSeq: [], outcome: '—', bases: 0, outs: 0, pathColor: 'black', notes: '' };
@@ -1224,6 +1312,7 @@ export default function ScorecardPage() {
     });
   };
 
+  // save team, players, grid, outs
   useEffect(() => { if (mounted) saveToStorage(tkey('teamName'), teamName); }, [mounted, teamName, tkey]);
   useEffect(() => { if (mounted) saveToStorage(tkey('players'), players); }, [mounted, players, tkey]);
   useEffect(() => { if (mounted) saveToStorage(tkey('grid'), grid); }, [mounted, grid, tkey]);
@@ -1252,12 +1341,15 @@ export default function ScorecardPage() {
   
 
 
+  // a reset that clears the entire scorecard
+  // top level reset
   const resetAll = () => {
     if (confirm('Clear the whole scorecard?')) {
       setGrid(players.map(() => makeEmptyRow()));
     }
   };
 
+  // exports the game as json for ai analytics later
   const exportJSON = () => {
     const data = { teamName, players, grid, innings: INNINGS };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1269,8 +1361,6 @@ export default function ScorecardPage() {
     URL.revokeObjectURL(url);
   };
 
-    // --- analytics helpers ---
-  const isHit = (o?: Outcome) => o === '1B' || o === '2B' || o === '3B' || o === 'HR';
 
   // count team runs by inning: any run segment that ends at home (to === 4)
   const inningRuns = useMemo(() => {
@@ -1279,6 +1369,7 @@ export default function ScorecardPage() {
       for (let r = 0; r < players.length; r++) {
         const cell = grid[r]?.[c];
         const segs = cell?.runs ?? [];
+        // each run to 4 (home plate) adds one to the total num of runs
         for (const seg of segs) if (seg.to === 4) runs++;
       }
       return runs;
@@ -1287,14 +1378,16 @@ export default function ScorecardPage() {
 
   const teamTotals = useMemo(() => {
     const R = inningRuns.reduce((a, b) => a + b, 0);
-    // compute team H, BB, K from player stats below
+    // compute team H, BB, K from player stats
     return { R };
   }, [inningRuns]);
 
   // per-batter statline
   type BatStats = { ab: number; hits: number; rbi: number; bb: number; k: number };
 
+  // player stats section
   const playerStats: BatStats[] = useMemo(() => {
+    // default to each section having a value of 0
     return players.map((_, r) => {
       let ab = 0, hits = 0, rbi = 0, bb = 0, k = 0;
       const batterNo = r + 1;
