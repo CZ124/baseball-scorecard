@@ -1018,17 +1018,14 @@ function BigCell({
   };
 
   
-
   return (
     <div
       className={`bg-white rounded-xl p-2 shadow-sm border flex flex-col gap-2 min-w-[220px] min-w-0`} 
-      disabled={disabled}
     >
       <PitchTracker
-        disabled={disabled}
         seq={merged.pitchSeq}
         onChange={(seq) => {
-          // derive auto outcomes from the new seq
+          // derive auto outcomes from the *new* seq
           const strikes = countStrikes(seq);
           const balls = countBalls(seq);
           const dead = hasDeadBall(seq);
@@ -1082,8 +1079,7 @@ function BigCell({
             onChange({ ...merged, runs: [], bases: 0, outcome: '—' })
           }
 
-          onSelectRun={(idx) => setEditingRunIdx(idx)} 
-          disabled={disabled}        
+          onSelectRun={(idx) => setEditingRunIdx(idx)}         
         />
         <OutsDots outs={outsDisplay} onNext={onNextOut} onResetFromHereDown={onResetFromHereDown ?? (() => {})} />
         <OutcomeSelect
@@ -1091,7 +1087,6 @@ function BigCell({
           onChange={onOutcomeChange}
           locale={locale}
           t={t}
-          disabled={disabled}
         />        
         </div>
 
@@ -1134,6 +1129,8 @@ function BigCell({
     </div>
   );
 }
+
+  
 
   
 
