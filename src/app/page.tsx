@@ -1081,7 +1081,6 @@ function BigCell({
           }
 
           onSelectRun={(idx) => setEditingRunIdx(idx)} 
-          disabled={disabled}        
         />
         <OutsDots outs={outsDisplay} onNext={onNextOut} onResetFromHereDown={onResetFromHereDown ?? (() => {})} />
         <OutcomeSelect
@@ -1089,7 +1088,7 @@ function BigCell({
           onChange={onOutcomeChange}
           locale={locale}
           t={t}
-          disabled={disabled}
+
         />        
         </div>
 
