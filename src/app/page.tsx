@@ -1018,6 +1018,7 @@ function BigCell({
   };
 
   
+
   return (
     <div
       className={`bg-white rounded-xl p-2 shadow-sm border flex flex-col gap-2 min-w-[220px] min-w-0`} 
@@ -1025,7 +1026,7 @@ function BigCell({
       <PitchTracker
         seq={merged.pitchSeq}
         onChange={(seq) => {
-          // derive auto outcomes from the *new* seq
+          // derive auto outcomes from the new seq
           const strikes = countStrikes(seq);
           const balls = countBalls(seq);
           const dead = hasDeadBall(seq);
@@ -1079,7 +1080,8 @@ function BigCell({
             onChange({ ...merged, runs: [], bases: 0, outcome: '—' })
           }
 
-          onSelectRun={(idx) => setEditingRunIdx(idx)}         
+          onSelectRun={(idx) => setEditingRunIdx(idx)} 
+          disabled={disabled}        
         />
         <OutsDots outs={outsDisplay} onNext={onNextOut} onResetFromHereDown={onResetFromHereDown ?? (() => {})} />
         <OutcomeSelect
@@ -1087,6 +1089,7 @@ function BigCell({
           onChange={onOutcomeChange}
           locale={locale}
           t={t}
+          disabled={disabled}
         />        
         </div>
 
@@ -1129,8 +1132,6 @@ function BigCell({
     </div>
   );
 }
-
-  
 
   
 
@@ -1333,7 +1334,9 @@ export default function ScorecardPage() {
 
   useEffect(() => {
     if (!mounted) return;
+    // try to load 'home' team state; if nothing saved yet, your current defaults remain
     loadTeamFromStorage('home');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
   
 
