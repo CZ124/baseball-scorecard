@@ -48,7 +48,7 @@ const LABELS: Record<Locale, Record<string, string>> = {
     noReport: '未生成报告',
   },
 };
-
+// analyze panel function
 export default function AnalyzePanel({
   locale = 'en',
   grid: _grid,
@@ -57,14 +57,20 @@ export default function AnalyzePanel({
 }: AnalyzePanelProps) {
   const L = LABELS[locale];
 
+  // json text, file name, notes, report, loading state values and their respective updating functions
   const [jsonText, setJsonText] = useState<string>('');
   const [fileName, setFileName] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [report, setReport] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
+  // function to handle input file
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    // check whether the file inputted exists and if it does, access the first element
+    // technically multiple files can be added, so it only takes the latest uploaded file
     const f = e.target.files?.[0];
+
+    // if the file does not exist, try validating it by waiting for text and set content to json
     if (!f) return;
     try {
       const text = await f.text();
@@ -82,23 +88,35 @@ export default function AnalyzePanel({
     
   }
 
+  // connects the DOM <input> to the fileRef
+  // connects the json file inputted to fileRef, and before this happens it is just null
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  // src/app/AnalyzePanel.tsx (only the analyze() change shown)
+  // analyze function
   async function analyze() {
+    // if there are no jsonText, then the user must have not uploaded anything
+    // ask them to upload
     if (!jsonText) {
       alert(L.mustUpload);
       return;
     }
+
+    // load before the results are ready
+    // report is empty until then
     setLoading(true);
     setReport('');
+
+    // wait for results to come up in the api
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonText, notes, locale }), // 👈 include locale
+        body: JSON.stringify({ jsonText, notes, locale }),
       });
       const data: unknown = await res.json();
+      
+      // if there's an error with res, it means that the analyze request failed due to some reasons
+      // could be tokens used up, internet, etc.
       if (!res.ok) {
         const msg =
           typeof data === 'object' && data !== null && 'error' in data
@@ -106,6 +124,8 @@ export default function AnalyzePanel({
             : L.requestFailed;
         throw new Error(msg);
       }
+
+      // the report is created and set with the analyzed report
       const r =
         typeof data === 'object' &&
         data !== null &&
@@ -117,12 +137,13 @@ export default function AnalyzePanel({
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setReport(`Error: ${msg}`);
-    } finally {
+    } finally { // when everything is done, close the loading
       setLoading(false);
     }
   }
 
 
+  // parse report as string to display in the front end dashboard
   const rendered = useMemo(
     () => (report ? (marked.parse(report) as string) : ''),
     [report]
@@ -163,7 +184,6 @@ export default function AnalyzePanel({
             )}
           </div>
 
-          {/* Optional read-only preview */}
           {jsonText && (
             <textarea
               readOnly

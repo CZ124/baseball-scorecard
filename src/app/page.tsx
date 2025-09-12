@@ -1387,10 +1387,13 @@ export default function ScorecardPage() {
   // player stats section
   const playerStats: BatStats[] = useMemo(() => {
     // default to each section having a value of 0
-    return players.map((_, r) => {
+    return players.map((_, r) => { // iterate over every player and every row index
+      // initialize stats to all 0 in the beginning
       let ab = 0, hits = 0, rbi = 0, bb = 0, k = 0;
       const batterNo = r + 1;
   
+      // loop through the nine innings
+      // set cell to be the cth item of the rth row only if the rth row exist
       for (let c = 0; c < INNINGS.length; c++) {
         const cell = grid[r]?.[c];
   
@@ -1420,6 +1423,7 @@ export default function ScorecardPage() {
   
   
 
+  // react has to mount the report component before rendering anything to avoid display bugs like flashing, etc.
   if (!mounted) {
     return <main className="min-h-screen bg-gray-50 p-6" />;
   }   
@@ -1725,6 +1729,6 @@ export default function ScorecardPage() {
         </section>
       </div>
     </main>
-  );
+  ); 
   
 }
